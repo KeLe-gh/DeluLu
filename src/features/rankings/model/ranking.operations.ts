@@ -191,3 +191,55 @@ export function removeRankingEntry(
         updatedAt: input.timestamp,
     }
 }
+interface ReorderRankingEntriesInput {
+    entryId: EntryId
+    toIndex: number
+    timestamp: IsoDateTime
+}
+
+export function reorderRankingEntries(
+    list: RankingList,
+    input: ReorderRankingEntriesInput,
+): RankingList | null {
+    const orderedEntries = [...list.entries].sort(
+        (a, b) => a.position - b.position,
+    )
+
+    const fromIndex = orderedEntries.findIndex(
+        (entry) => entry.id === input.entryId,
+    )
+
+    if (
+        fromIndex < 0 ||
+        !Number.isInteger(input.toIndex) ||
+        input.toIndex < 0 ||
+        input.toIndex >= orderedEntries.length
+    ) {
+        return null
+    }
+
+    if (fromIndex === input.toIndex) {
+        return list
+    }
+
+    const positions = orderedEntries.map(
+        (entry) => entry.position,
+    )
+
+    const [movedEntry] = orderedEntries.splice(fromIndex, 1)
+
+    if (!movedEntry) {
+        return null
+    }
+
+    orderedEntries.splice(input.toIndex, 0, movedEntry)
+
+    return {
+        ...list,
+        entries: orderedEntries.map((entry, index) => ({
+            ...entry,
+            position: positions[index],
+        })),
+        updatedAt: input.timestamp,
+    }
+}

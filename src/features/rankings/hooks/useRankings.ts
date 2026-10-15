@@ -4,6 +4,7 @@ import {
     createRankingList,
     moveRankingEntry,
     removeRankingEntry,
+    reorderRankingEntries,
 } from '../model/ranking.operations'
 import type {
     EntryId,
@@ -110,6 +111,33 @@ export function useRankings() {
         return true
     }
 
+    function reorderEntryInRanking(
+        listId: ListId,
+        entryId: EntryId,
+        toIndex: number,
+    ): boolean {
+        const list = lists.find(
+            (currentList) => currentList.id === listId,
+        )
+
+        if (!list) {
+            return false
+        }
+
+        const updatedList = reorderRankingEntries(list, {
+            entryId,
+            toIndex,
+            timestamp: new Date().toISOString(),
+        })
+
+        if (updatedList === null) {
+            return false
+        }
+
+        replaceList(updatedList)
+        return true
+    }
+
     function replaceList(updatedList: RankingList): void {
         setLists((currentLists) =>
             currentLists.map((currentList) =>
@@ -126,5 +154,6 @@ export function useRankings() {
         addEntryToRanking,
         moveEntryInRanking,
         removeEntryFromRanking,
+        reorderEntryInRanking,
     }
 }

@@ -5,18 +5,26 @@ import type {
     RankingList,
 } from '../../../shared/types/list.types'
 import { RankingEntryEditor } from '../components/RankingEntryEditor'
+import { SortableRankingEntries } from '../components/SortableRankingEntries'
 import { getRankingSize } from '../model/ranking.operations'
 
 interface RankingDetailPageProps {
     list: RankingList
     getItemName: (itemId: ItemId) => string
-    onAddEntry: (name: string, position: number) => boolean
+    onAddEntry: (
+        name: string,
+        position: number,
+    ) => boolean
     onUpdateEntry: (
         entryId: EntryId,
         name: string,
         position: number,
     ) => boolean
     onRemoveEntry: (entryId: EntryId) => boolean
+    onReorderEntry: (
+        entryId: EntryId,
+        toIndex: number,
+    ) => boolean
     onBack: () => void
 }
 
@@ -26,6 +34,7 @@ export function RankingDetailPage({
                                       onAddEntry,
                                       onUpdateEntry,
                                       onRemoveEntry,
+                                      onReorderEntry,
                                       onBack,
                                   }: RankingDetailPageProps) {
     const [name, setName] = useState('')
@@ -36,10 +45,6 @@ export function RankingDetailPage({
 
     const size = getRankingSize(list)
     const nextPosition = size + 1
-
-    const orderedEntries = [...list.entries].sort(
-        (a, b) => a.position - b.position,
-    )
 
     const editingEntry = list.entries.find(
         (entry) => entry.id === editingEntryId,
@@ -66,9 +71,7 @@ export function RankingDetailPage({
             return
         }
 
-        const added = onAddEntry(name, position)
-
-        if (!added) {
+        if (!onAddEntry(name, position)) {
             setError(
                 'Der Eintrag konnte nicht hinzugefügt werden.',
             )
@@ -165,7 +168,9 @@ export function RankingDetailPage({
                                     event.target.value,
                                 )
                             }
-                            placeholder={String(nextPosition)}
+                            placeholder={
+                                String(nextPosition)
+                            }
                             aria-describedby="entry-position-help"
                         />
 
@@ -179,36 +184,26 @@ export function RankingDetailPage({
                         Eintrag hinzufügen
                     </button>
 
-                    {error && <p role="alert">{error}</p>}
+                    {error && (
+                        <p role="alert">{error}</p>
+                    )}
                 </form>
             )}
 
             <h2>Einträge</h2>
 
-            {orderedEntries.length === 0 ? (
-                <p>Diese Rangliste hat noch keine Einträge.</p>
+            {list.entries.length === 0 ? (
+                <p>
+                    Diese Rangliste hat noch keine Einträge.
+                </p>
             ) : (
-                <ol>
-                    {orderedEntries.map((entry) => (
-                        <li
-                            key={entry.id}
-                            value={entry.position}
-                        >
-                            <button
-                                type="button"
-                                className="ranking-card"
-                                onClick={() =>
-                                    setEditingEntryId(entry.id)
-                                }
-                                aria-label={`${getItemName(entry.itemId)}, Position ${entry.position}, bearbeiten`}
-                            >
-                                <span className="ranking-card__title">
-                                    {getItemName(entry.itemId)}
-                                </span>
-                            </button>
-                        </li>
-                    ))}
-                </ol>
+                <SortableRankingEntries
+                    entries={list.entries}
+                    getItemName={getItemName}
+                    onEdit={setEditingEntryId}
+                    onRemove={onRemoveEntry}
+                    onReorder={onReorderEntry}
+                />
             )}
         </main>
     )

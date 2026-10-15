@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import type { FormEvent } from 'react'
 
 interface RankingEntryEditorProps {
     name: string
@@ -16,12 +17,13 @@ export function RankingEntryEditor({
                                        onCancel,
                                    }: RankingEntryEditorProps) {
     const [editedName, setEditedName] = useState(name)
-    const [positionInput, setPositionInput] =
-        useState(String(position))
     const [error, setError] = useState('')
 
-    function save() {
-        const newPosition = Number(positionInput)
+    function save(event: FormEvent<HTMLFormElement>) {
+        event.preventDefault()
+
+        const formData = new FormData(event.currentTarget)
+        const newPosition = Number(formData.get('position'))
 
         if (editedName.trim() === '') {
             setError('Bitte gib einen Namen ein.')
@@ -38,9 +40,7 @@ export function RankingEntryEditor({
             return
         }
 
-        const saved = onSave(editedName, newPosition)
-
-        if (!saved) {
+        if (!onSave(editedName, newPosition)) {
             setError(
                 'Die Änderungen konnten nicht gespeichert werden.',
             )
@@ -48,9 +48,7 @@ export function RankingEntryEditor({
     }
 
     function remove() {
-        const removed = onRemove()
-
-        if (!removed) {
+        if (!onRemove()) {
             setError(
                 'Der Eintrag konnte nicht entfernt werden.',
             )
@@ -58,16 +56,13 @@ export function RankingEntryEditor({
     }
 
     return (
-        <form
-            onSubmit={(event) => {
-                event.preventDefault()
-                save()
-            }}
-        >
+        <form onSubmit={save}>
             <h2>Eintrag bearbeiten</h2>
 
             <div>
-                <label htmlFor="edit-entry-name">Name</label>
+                <label htmlFor="edit-entry-name">
+                    Name
+                </label>
 
                 <input
                     id="edit-entry-name"
@@ -91,14 +86,13 @@ export function RankingEntryEditor({
                 </label>
 
                 <input
+                    key={position}
                     id="edit-entry-position"
+                    name="position"
                     type="number"
                     min="1"
                     step="1"
-                    value={positionInput}
-                    onChange={(event) =>
-                        setPositionInput(event.target.value)
-                    }
+                    defaultValue={position}
                     required
                 />
             </div>

@@ -1,7 +1,10 @@
 import { useState } from 'react'
 import { HomePage } from './app/HomePage'
 import { ListMenuPage } from './features/lists'
-import { RankingsPage, useRankings } from './features/rankings'
+import {
+  RankingsPage,
+  useRankings,
+} from './features/rankings'
 import {
   createCatalogItem,
   renameCatalogItem,
@@ -25,6 +28,7 @@ function App() {
     addEntryToRanking,
     moveEntryInRanking,
     removeEntryFromRanking,
+    reorderEntryInRanking,
   } = useRankings()
 
   const {
@@ -34,8 +38,9 @@ function App() {
   } = useCatalog()
 
   function getItemName(itemId: ItemId): string {
-    return items.find((item) => item.id === itemId)?.name
-        ?? 'Unbekannter Eintrag'
+    return items.find(
+        (item) => item.id === itemId,
+    )?.name ?? 'Unbekannter Eintrag'
   }
 
   function addEntry(
@@ -78,7 +83,8 @@ function App() {
     )
 
     const entry = list?.entries.find(
-        (currentEntry) => currentEntry.id === entryId,
+        (currentEntry) =>
+            currentEntry.id === entryId,
     )
 
     if (!entry) {
@@ -86,7 +92,8 @@ function App() {
     }
 
     const item = items.find(
-        (currentItem) => currentItem.id === entry.itemId,
+        (currentItem) =>
+            currentItem.id === entry.itemId,
     )
 
     if (!item) {
@@ -157,6 +164,7 @@ function App() {
                 onAddEntry={addEntry}
                 onUpdateEntry={updateEntry}
                 onRemoveEntry={removeEntryFromRanking}
+                onReorderEntry={reorderEntryInRanking}
             />
         )}
       </>

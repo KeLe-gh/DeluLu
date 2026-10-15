@@ -27,6 +27,11 @@ interface RankingsPageProps {
         listId: ListId,
         entryId: EntryId,
     ) => boolean
+    onReorderEntry: (
+        listId: ListId,
+        entryId: EntryId,
+        toIndex: number,
+    ) => boolean
 }
 
 function getListLabel(list: RankingList): string {
@@ -42,6 +47,7 @@ export function RankingsPage({
                                  onAddEntry,
                                  onUpdateEntry,
                                  onRemoveEntry,
+                                 onReorderEntry,
                              }: RankingsPageProps) {
     const [listName, setListName] = useState('')
     const [error, setError] = useState('')
@@ -56,7 +62,9 @@ export function RankingsPage({
         const created = onCreateList(listName)
 
         if (!created) {
-            setError('Bitte gib einen Namen für deine Liste ein.')
+            setError(
+                'Bitte gib einen Namen für deine Liste ein.',
+            )
             return
         }
 
@@ -86,7 +94,17 @@ export function RankingsPage({
                     )
                 }
                 onRemoveEntry={(entryId) =>
-                    onRemoveEntry(selectedList.id, entryId)
+                    onRemoveEntry(
+                        selectedList.id,
+                        entryId,
+                    )
+                }
+                onReorderEntry={(entryId, toIndex) =>
+                    onReorderEntry(
+                        selectedList.id,
+                        entryId,
+                        toIndex,
+                    )
                 }
                 onBack={() => setSelectedListId(null)}
             />
@@ -104,7 +122,9 @@ export function RankingsPage({
                 }}
             >
                 <div>
-                    <label htmlFor="list-name">Listenname</label>
+                    <label htmlFor="list-name">
+                        Listenname
+                    </label>
 
                     <input
                         id="list-name"
@@ -118,7 +138,9 @@ export function RankingsPage({
                     />
                 </div>
 
-                <button type="submit">Liste erstellen</button>
+                <button type="submit">
+                    Liste erstellen
+                </button>
 
                 {error && <p role="alert">{error}</p>}
             </form>
@@ -128,7 +150,9 @@ export function RankingsPage({
                     <button
                         type="button"
                         className="ranking-card"
-                        onClick={() => setSelectedListId(list.id)}
+                        onClick={() =>
+                            setSelectedListId(list.id)
+                        }
                     >
                         <span className="ranking-card__title">
                             {list.title}
