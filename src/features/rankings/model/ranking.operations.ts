@@ -166,3 +166,28 @@ export function moveRankingEntry(
         updatedAt: input.timestamp,
     }
 }
+interface RemoveRankingEntryInput {
+    entryId: EntryId
+    timestamp: IsoDateTime
+}
+
+export function removeRankingEntry(
+    list: RankingList,
+    input: RemoveRankingEntryInput,
+): RankingList | null {
+    const exists = list.entries.some(
+        (entry) => entry.id === input.entryId,
+    )
+
+    if (!exists) {
+        return null
+    }
+
+    return {
+        ...list,
+        entries: list.entries.filter(
+            (entry) => entry.id !== input.entryId,
+        ),
+        updatedAt: input.timestamp,
+    }
+}

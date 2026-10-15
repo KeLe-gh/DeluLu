@@ -24,6 +24,7 @@ function App() {
     addRankingList,
     addEntryToRanking,
     moveEntryInRanking,
+    removeEntryFromRanking,
   } = useRankings()
 
   const {
@@ -117,7 +118,9 @@ function App() {
 
   if (screen === 'home') {
     return (
-        <HomePage onOpenLists={() => setScreen('lists')} />
+        <HomePage
+            onOpenLists={() => setScreen('lists')}
+        />
     )
   }
 
@@ -153,6 +156,7 @@ function App() {
                 onCreateList={addRankingList}
                 onAddEntry={addEntry}
                 onUpdateEntry={updateEntry}
+                onRemoveEntry={removeEntryFromRanking}
             />
         )}
       </>

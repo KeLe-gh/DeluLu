@@ -4,6 +4,7 @@ interface RankingEntryEditorProps {
     name: string
     position: number
     onSave: (name: string, position: number) => boolean
+    onRemove: () => boolean
     onCancel: () => void
 }
 
@@ -11,6 +12,7 @@ export function RankingEntryEditor({
                                        name,
                                        position,
                                        onSave,
+                                       onRemove,
                                        onCancel,
                                    }: RankingEntryEditorProps) {
     const [editedName, setEditedName] = useState(name)
@@ -41,6 +43,16 @@ export function RankingEntryEditor({
         if (!saved) {
             setError(
                 'Die Änderungen konnten nicht gespeichert werden.',
+            )
+        }
+    }
+
+    function remove() {
+        const removed = onRemove()
+
+        if (!removed) {
+            setError(
+                'Der Eintrag konnte nicht entfernt werden.',
             )
         }
     }
@@ -99,6 +111,10 @@ export function RankingEntryEditor({
 
             <button type="button" onClick={onCancel}>
                 Abbrechen
+            </button>
+
+            <button type="button" onClick={remove}>
+                Aus Liste entfernen
             </button>
         </form>
     )

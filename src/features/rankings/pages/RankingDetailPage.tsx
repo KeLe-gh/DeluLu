@@ -16,6 +16,7 @@ interface RankingDetailPageProps {
         name: string,
         position: number,
     ) => boolean
+    onRemoveEntry: (entryId: EntryId) => boolean
     onBack: () => void
 }
 
@@ -24,6 +25,7 @@ export function RankingDetailPage({
                                       getItemName,
                                       onAddEntry,
                                       onUpdateEntry,
+                                      onRemoveEntry,
                                       onBack,
                                   }: RankingDetailPageProps) {
     const [name, setName] = useState('')
@@ -107,6 +109,17 @@ export function RankingDetailPage({
                         }
 
                         return saved
+                    }}
+                    onRemove={() => {
+                        const removed = onRemoveEntry(
+                            editingEntry.id,
+                        )
+
+                        if (removed) {
+                            setEditingEntryId(null)
+                        }
+
+                        return removed
                     }}
                     onCancel={() => setEditingEntryId(null)}
                 />

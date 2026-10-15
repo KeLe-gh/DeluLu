@@ -23,6 +23,10 @@ interface RankingsPageProps {
         name: string,
         position: number,
     ) => boolean
+    onRemoveEntry: (
+        listId: ListId,
+        entryId: EntryId,
+    ) => boolean
 }
 
 function getListLabel(list: RankingList): string {
@@ -37,11 +41,12 @@ export function RankingsPage({
                                  onCreateList,
                                  onAddEntry,
                                  onUpdateEntry,
+                                 onRemoveEntry,
                              }: RankingsPageProps) {
     const [listName, setListName] = useState('')
     const [error, setError] = useState('')
     const [selectedListId, setSelectedListId] =
-        useState<RankingList['id'] | null>(null)
+        useState<ListId | null>(null)
 
     const selectedList = lists.find(
         (list) => list.id === selectedListId,
@@ -79,6 +84,9 @@ export function RankingsPage({
                         name,
                         position,
                     )
+                }
+                onRemoveEntry={(entryId) =>
+                    onRemoveEntry(selectedList.id, entryId)
                 }
                 onBack={() => setSelectedListId(null)}
             />
