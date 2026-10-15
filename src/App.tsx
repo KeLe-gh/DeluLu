@@ -1,15 +1,17 @@
 import { useState } from 'react'
 import { HomePage } from './app/HomePage'
-import { ListMenuPage } from './features/lists'
-import {
-  RankingsPage,
-  useRankings,
-} from './features/rankings'
+import { AuthGate } from './features/auth'
 import {
   createCatalogItem,
   renameCatalogItem,
   useCatalog,
 } from './features/catalog'
+import { ListMenuPage } from './features/lists'
+import {
+  RankingsPage,
+  useRankings,
+} from './features/rankings'
+import { supabaseAuthService } from './infrastructure/supabase/supabaseAuthService'
 import type {
   EntryId,
   ItemId,
@@ -19,7 +21,7 @@ import './App.css'
 
 type Screen = 'home' | 'lists' | 'rankings'
 
-function App() {
+function DeluluApp() {
   const [screen, setScreen] = useState<Screen>('home')
 
   const {
@@ -38,9 +40,10 @@ function App() {
   } = useCatalog()
 
   function getItemName(itemId: ItemId): string {
-    return items.find(
-        (item) => item.id === itemId,
-    )?.name ?? 'Unbekannter Eintrag'
+    return (
+        items.find((item) => item.id === itemId)?.name ??
+        'Unbekannter Eintrag'
+    )
   }
 
   function addEntry(
@@ -83,8 +86,7 @@ function App() {
     )
 
     const entry = list?.entries.find(
-        (currentEntry) =>
-            currentEntry.id === entryId,
+        (currentEntry) => currentEntry.id === entryId,
     )
 
     if (!entry) {
@@ -92,8 +94,7 @@ function App() {
     }
 
     const item = items.find(
-        (currentItem) =>
-            currentItem.id === entry.itemId,
+        (currentItem) => currentItem.id === entry.itemId,
     )
 
     if (!item) {
@@ -168,6 +169,14 @@ function App() {
             />
         )}
       </>
+  )
+}
+
+function App() {
+  return (
+      <AuthGate authService={supabaseAuthService}>
+        <DeluluApp />
+      </AuthGate>
   )
 }
 
