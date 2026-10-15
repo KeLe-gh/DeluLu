@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import type {
+    EntryId,
     ItemId,
     ListId,
     RankingList,
@@ -16,6 +17,12 @@ interface RankingsPageProps {
         name: string,
         position: number,
     ) => boolean
+    onUpdateEntry: (
+        listId: ListId,
+        entryId: EntryId,
+        name: string,
+        position: number,
+    ) => boolean
 }
 
 function getListLabel(list: RankingList): string {
@@ -29,6 +36,7 @@ export function RankingsPage({
                                  getItemName,
                                  onCreateList,
                                  onAddEntry,
+                                 onUpdateEntry,
                              }: RankingsPageProps) {
     const [listName, setListName] = useState('')
     const [error, setError] = useState('')
@@ -60,6 +68,14 @@ export function RankingsPage({
                 onAddEntry={(name, position) =>
                     onAddEntry(
                         selectedList.id,
+                        name,
+                        position,
+                    )
+                }
+                onUpdateEntry={(entryId, name, position) =>
+                    onUpdateEntry(
+                        selectedList.id,
+                        entryId,
                         name,
                         position,
                     )

@@ -4,9 +4,11 @@ import { ListMenuPage } from './features/lists'
 import { RankingsPage, useRankings } from './features/rankings'
 import {
   createCatalogItem,
+  renameCatalogItem,
   useCatalog,
 } from './features/catalog'
 import type {
+  EntryId,
   ItemId,
   ListId,
 } from './shared/types/list.types'
@@ -21,11 +23,13 @@ function App() {
     lists,
     addRankingList,
     addEntryToRanking,
+    moveEntryInRanking,
   } = useRankings()
 
   const {
     items,
     addCatalogItem,
+    updateCatalogItem,
   } = useCatalog()
 
   function getItemName(itemId: ItemId): string {
@@ -59,6 +63,55 @@ function App() {
     }
 
     addCatalogItem(item)
+    return true
+  }
+
+  function updateEntry(
+      listId: ListId,
+      entryId: EntryId,
+      name: string,
+      position: number,
+  ): boolean {
+    const list = lists.find(
+        (currentList) => currentList.id === listId,
+    )
+
+    const entry = list?.entries.find(
+        (currentEntry) => currentEntry.id === entryId,
+    )
+
+    if (!entry) {
+      return false
+    }
+
+    const item = items.find(
+        (currentItem) => currentItem.id === entry.itemId,
+    )
+
+    if (!item) {
+      return false
+    }
+
+    const updatedItem = renameCatalogItem(item, {
+      name,
+      timestamp: new Date().toISOString(),
+    })
+
+    if (updatedItem === null) {
+      return false
+    }
+
+    const moved = moveEntryInRanking(
+        listId,
+        entryId,
+        position,
+    )
+
+    if (!moved) {
+      return false
+    }
+
+    updateCatalogItem(updatedItem)
     return true
   }
 
@@ -99,6 +152,7 @@ function App() {
                 getItemName={getItemName}
                 onCreateList={addRankingList}
                 onAddEntry={addEntry}
+                onUpdateEntry={updateEntry}
             />
         )}
       </>

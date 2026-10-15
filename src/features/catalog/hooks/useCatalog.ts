@@ -8,8 +8,19 @@ export function useCatalog() {
         setItems((currentItems) => [...currentItems, item])
     }
 
+    function updateCatalogItem(item: CatalogItem): void {
+        setItems((currentItems) =>
+            currentItems.map((currentItem) =>
+                currentItem.id === item.id
+                    ? item
+                    : currentItem,
+            ),
+        )
+    }
+
     return {
         items,
         addCatalogItem,
+        updateCatalogItem,
     }
 }

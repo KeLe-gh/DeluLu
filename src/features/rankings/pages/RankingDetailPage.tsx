@@ -1,14 +1,21 @@
 import { useState } from 'react'
 import type {
+    EntryId,
     ItemId,
     RankingList,
 } from '../../../shared/types/list.types'
+import { RankingEntryEditor } from '../components/RankingEntryEditor'
 import { getRankingSize } from '../model/ranking.operations'
 
 interface RankingDetailPageProps {
     list: RankingList
     getItemName: (itemId: ItemId) => string
     onAddEntry: (name: string, position: number) => boolean
+    onUpdateEntry: (
+        entryId: EntryId,
+        name: string,
+        position: number,
+    ) => boolean
     onBack: () => void
 }
 
@@ -16,17 +23,24 @@ export function RankingDetailPage({
                                       list,
                                       getItemName,
                                       onAddEntry,
+                                      onUpdateEntry,
                                       onBack,
                                   }: RankingDetailPageProps) {
     const [name, setName] = useState('')
     const [positionInput, setPositionInput] = useState('')
     const [error, setError] = useState('')
+    const [editingEntryId, setEditingEntryId] =
+        useState<EntryId | null>(null)
 
     const size = getRankingSize(list)
     const nextPosition = size + 1
 
     const orderedEntries = [...list.entries].sort(
         (a, b) => a.position - b.position,
+    )
+
+    const editingEntry = list.entries.find(
+        (entry) => entry.id === editingEntryId,
     )
 
     function addEntry() {
@@ -76,59 +90,85 @@ export function RankingDetailPage({
                 {size === 0 ? 'Leere Rangliste' : `Top ${size}`}
             </p>
 
-            <form
-                onSubmit={(event) => {
-                    event.preventDefault()
-                    addEntry()
-                }}
-            >
-                <h2>Eintrag hinzufügen</h2>
+            {editingEntry ? (
+                <RankingEntryEditor
+                    key={editingEntry.id}
+                    name={getItemName(editingEntry.itemId)}
+                    position={editingEntry.position}
+                    onSave={(newName, newPosition) => {
+                        const saved = onUpdateEntry(
+                            editingEntry.id,
+                            newName,
+                            newPosition,
+                        )
 
-                <div>
-                    <label htmlFor="entry-name">Name</label>
-
-                    <input
-                        id="entry-name"
-                        type="text"
-                        value={name}
-                        onChange={(event) =>
-                            setName(event.target.value)
+                        if (saved) {
+                            setEditingEntryId(null)
                         }
-                        placeholder="Zum Beispiel Nanami"
-                        required
-                    />
-                </div>
 
-                <div>
-                    <label htmlFor="entry-position">
-                        Position
-                    </label>
+                        return saved
+                    }}
+                    onCancel={() => setEditingEntryId(null)}
+                />
+            ) : (
+                <form
+                    onSubmit={(event) => {
+                        event.preventDefault()
+                        addEntry()
+                    }}
+                >
+                    <h2>Eintrag hinzufügen</h2>
 
-                    <input
-                        id="entry-position"
-                        type="number"
-                        min="1"
-                        step="1"
-                        value={positionInput}
-                        onChange={(event) =>
-                            setPositionInput(event.target.value)
-                        }
-                        placeholder={String(nextPosition)}
-                        aria-describedby="entry-position-help"
-                    />
+                    <div>
+                        <label htmlFor="entry-name">
+                            Name
+                        </label>
 
-                    <p id="entry-position-help">
-                        Leer lassen: am Ende auf Position{' '}
-                        {nextPosition} einfügen.
-                    </p>
-                </div>
+                        <input
+                            id="entry-name"
+                            type="text"
+                            value={name}
+                            onChange={(event) =>
+                                setName(event.target.value)
+                            }
+                            placeholder="Zum Beispiel Nanami"
+                            required
+                        />
+                    </div>
 
-                <button type="submit">
-                    Eintrag hinzufügen
-                </button>
+                    <div>
+                        <label htmlFor="entry-position">
+                            Position
+                        </label>
 
-                {error && <p role="alert">{error}</p>}
-            </form>
+                        <input
+                            id="entry-position"
+                            type="number"
+                            min="1"
+                            step="1"
+                            value={positionInput}
+                            onChange={(event) =>
+                                setPositionInput(
+                                    event.target.value,
+                                )
+                            }
+                            placeholder={String(nextPosition)}
+                            aria-describedby="entry-position-help"
+                        />
+
+                        <p id="entry-position-help">
+                            Leer lassen: am Ende auf Position{' '}
+                            {nextPosition} einfügen.
+                        </p>
+                    </div>
+
+                    <button type="submit">
+                        Eintrag hinzufügen
+                    </button>
+
+                    {error && <p role="alert">{error}</p>}
+                </form>
+            )}
 
             <h2>Einträge</h2>
 
@@ -141,7 +181,18 @@ export function RankingDetailPage({
                             key={entry.id}
                             value={entry.position}
                         >
-                            {getItemName(entry.itemId)}
+                            <button
+                                type="button"
+                                className="ranking-card"
+                                onClick={() =>
+                                    setEditingEntryId(entry.id)
+                                }
+                                aria-label={`${getItemName(entry.itemId)}, Position ${entry.position}, bearbeiten`}
+                            >
+                                <span className="ranking-card__title">
+                                    {getItemName(entry.itemId)}
+                                </span>
+                            </button>
                         </li>
                     ))}
                 </ol>
