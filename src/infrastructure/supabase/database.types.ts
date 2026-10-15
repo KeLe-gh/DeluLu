@@ -191,6 +191,38 @@ export type Database = {
                     isSetofReturn: true
                 }
             }
+            save_ranking_list: {
+                Args: { p_entries: Json; p_expected_revision?: number; p_list: Json }
+                Returns: {
+                    accent_color: string | null
+                    background_image_id: string | null
+                    cover_image_id: string | null
+                    created_at: string
+                    description: string
+                    id: string
+                    owner_id: string
+                    revision: number
+                    theme_id: string
+                    title: string
+                    updated_at: string
+                }[]
+                SetofOptions: {
+                    from: "*"
+                    to: "ranking_lists"
+                    isOneToOne: false
+                    isSetofReturn: true
+                }
+            }
+            save_ranking_with_profile: {
+                Args: {
+                    p_catalog_expected_revision?: number
+                    p_catalog_item?: Json
+                    p_entries: Json
+                    p_expected_revision?: number
+                    p_list: Json
+                }
+                Returns: Json
+            }
         }
         Enums: {
             [_ in never]: never

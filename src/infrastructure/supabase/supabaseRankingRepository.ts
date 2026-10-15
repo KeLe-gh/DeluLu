@@ -1,4 +1,5 @@
 import type { RankingRepository } from '../../features/rankings'
+import { RevisionConflictError } from '../../shared/errors/persistence.errors'
 import { supabase } from './client'
 import { mapRankingList } from './database.mappers'
 import type { Database } from './database.types'
@@ -98,5 +99,55 @@ export const supabaseRankingRepository: RankingRepository = {
         throw new Error(
             'Die Listen wurden während des Ladens geändert. Bitte lade sie erneut.',
         )
+    },
+    async save(list, expectedRevision) {
+        const entries = list.entries.map((entry) => ({
+            id: entry.id,
+            item_id: entry.itemId,
+            position: entry.position,
+            note: entry.note,
+        }))
+
+        const { data, error } = await supabase
+            .rpc('save_ranking_list', {
+                p_list: {
+                    id: list.id,
+                    title: list.title,
+                    description: list.description,
+                    cover_image_id: list.coverImageId,
+                    theme_id: list.appearance.themeId,
+                    accent_color: list.appearance.accentColor,
+                    background_image_id:
+                    list.appearance.backgroundImageId,
+                },
+                p_entries: entries,
+                p_expected_revision:
+                    expectedRevision ?? undefined,
+            })
+            .single()
+
+        if (error) {
+            if (error.code === 'PT409') {
+                throw new RevisionConflictError()
+            }
+
+            throw error
+        }
+
+        if (data === null) {
+            throw new Error(
+                'Die Liste konnte nicht gespeichert werden.',
+            )
+        }
+
+        const savedEntries: EntryRow[] = entries.map(
+            (entry) => ({
+                ...entry,
+                owner_id: data.owner_id,
+                list_id: data.id,
+            }),
+        )
+
+        return mapRankingList(data, savedEntries)
     },
 }
