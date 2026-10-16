@@ -5,16 +5,35 @@ import type {
     ListId,
     RankingList,
 } from '../../../shared/types/list.types'
-import { getRankingSize } from '../model/ranking.operations'
+import { RankingListManager } from '../components/RankingListManager'
+import { SortableRankingLists } from '../components/SortableRankingLists'
 import { RankingDetailPage } from './RankingDetailPage'
 
 interface RankingsPageProps {
     lists: readonly RankingList[]
+    catalogItems: readonly {
+        id: ItemId
+        name: string
+    }[]
     getItemName: (itemId: ItemId) => string
     onCreateList: (title: string) => Promise<boolean>
+    onRenameList: (
+        listId: ListId,
+        title: string,
+    ) => Promise<boolean>
+    onDeleteList: (listId: ListId) => Promise<boolean>
+    onReorderList: (
+        listId: ListId,
+        toIndex: number,
+    ) => Promise<boolean>
     onAddEntry: (
         listId: ListId,
         name: string,
+        position: number,
+    ) => Promise<boolean>
+    onAddExistingEntry: (
+        listId: ListId,
+        itemId: ItemId,
         position: number,
     ) => Promise<boolean>
     onUpdateEntry: (
@@ -34,16 +53,16 @@ interface RankingsPageProps {
     ) => Promise<boolean>
 }
 
-function getListLabel(list: RankingList): string {
-    const size = getRankingSize(list)
-    return size === 0 ? 'Leere Rangliste' : `Top ${size}`
-}
-
 export function RankingsPage({
                                  lists,
+                                 catalogItems,
                                  getItemName,
                                  onCreateList,
+                                 onRenameList,
+                                 onDeleteList,
+                                 onReorderList,
                                  onAddEntry,
+                                 onAddExistingEntry,
                                  onUpdateEntry,
                                  onRemoveEntry,
                                  onReorderEntry,
@@ -53,9 +72,15 @@ export function RankingsPage({
     const [isCreating, setIsCreating] = useState(false)
     const [selectedListId, setSelectedListId] =
         useState<ListId | null>(null)
+    const [managedListId, setManagedListId] =
+        useState<ListId | null>(null)
 
     const selectedList = lists.find(
         (list) => list.id === selectedListId,
+    )
+
+    const managedList = lists.find(
+        (list) => list.id === managedListId,
     )
 
     async function createList() {
@@ -94,9 +119,17 @@ export function RankingsPage({
             <RankingDetailPage
                 key={selectedList.id}
                 list={selectedList}
+                catalogItems={catalogItems}
                 getItemName={getItemName}
                 onAddEntry={(name, position) =>
                     onAddEntry(selectedList.id, name, position)
+                }
+                onAddExistingEntry={(itemId, position) =>
+                    onAddExistingEntry(
+                        selectedList.id,
+                        itemId,
+                        position,
+                    )
                 }
                 onUpdateEntry={(entryId, name, position) =>
                     onUpdateEntry(
@@ -117,6 +150,28 @@ export function RankingsPage({
                     )
                 }
                 onBack={() => setSelectedListId(null)}
+            />
+        )
+    }
+
+    if (managedList) {
+        return (
+            <RankingListManager
+                key={managedList.id}
+                list={managedList}
+                onRename={async (title) => {
+                    const saved = await onRenameList(
+                        managedList.id,
+                        title,
+                    )
+
+                    if (saved) {
+                        setManagedListId(null)
+                    }
+
+                    return saved
+                }}
+                onCancel={() => setManagedListId(null)}
             />
         )
     }
@@ -156,24 +211,17 @@ export function RankingsPage({
                 {error && <p role="alert">{error}</p>}
             </form>
 
-            {lists.length === 0 && (
+            {lists.length === 0 ? (
                 <p>Du hast noch keine Top-Listen erstellt.</p>
+            ) : (
+                <SortableRankingLists
+                    lists={lists}
+                    onOpen={setSelectedListId}
+                    onRename={setManagedListId}
+                    onDelete={onDeleteList}
+                    onReorder={onReorderList}
+                />
             )}
-
-            {lists.map((list) => (
-                <article key={list.id}>
-                    <button
-                        type="button"
-                        className="ranking-card"
-                        onClick={() => setSelectedListId(list.id)}
-                    >
-                        <span className="ranking-card__title">
-                            {list.title}
-                        </span>
-                        <span>{getListLabel(list)}</span>
-                    </button>
-                </article>
-            ))}
         </main>
     )
 }

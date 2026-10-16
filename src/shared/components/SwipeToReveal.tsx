@@ -10,6 +10,10 @@ interface SwipeToRevealProps {
     children: ReactNode
     label: string
     onRemove: () => boolean | Promise<boolean>
+    onRename?: () => void
+    removeLabel?: string
+    removeAriaLabel?: string
+    removeError?: string
 }
 
 interface Gesture {
@@ -27,9 +31,12 @@ export function SwipeToReveal({
                                   children,
                                   label,
                                   onRemove,
+                                  onRename,
+                                  removeLabel = 'Entfernen',
+                                  removeAriaLabel = label + ' aus Liste entfernen',
+                                  removeError = 'Der Eintrag konnte nicht entfernt werden.',
                               }: SwipeToRevealProps) {
     const actionsId = useId()
-
     const [offset, setOffset] = useState(0)
     const [swiping, setSwiping] = useState(false)
     const [error, setError] = useState('')
@@ -40,7 +47,11 @@ export function SwipeToReveal({
     const suppressClick = useRef(false)
     const removingRef = useRef(false)
 
-    const open = offset === -ACTION_WIDTH
+    const actionsWidth = onRename
+        ? ACTION_WIDTH * 2
+        : ACTION_WIDTH
+
+    const open = offset === -actionsWidth
 
     function updateOffset(value: number) {
         offsetRef.current = value
@@ -58,14 +69,10 @@ export function SwipeToReveal({
 
         try {
             if (!await onRemove()) {
-                setError(
-                    'Der Eintrag konnte nicht entfernt werden.',
-                )
+                setError(removeError)
             }
         } catch {
-            setError(
-                'Der Eintrag konnte nicht entfernt werden.',
-            )
+            setError(removeError)
         } finally {
             removingRef.current = false
             setIsRemoving(false)
@@ -132,7 +139,6 @@ export function SwipeToReveal({
 
             gesture.axis = 'horizontal'
             setSwiping(true)
-
             event.currentTarget.setPointerCapture(event.pointerId)
         }
 
@@ -146,7 +152,7 @@ export function SwipeToReveal({
 
         updateOffset(
             Math.max(
-                -ACTION_WIDTH,
+                -actionsWidth,
                 Math.min(0, gesture.startOffset + dx),
             ),
         )
@@ -164,8 +170,8 @@ export function SwipeToReveal({
 
         if (gesture.axis === 'horizontal') {
             updateOffset(
-                offsetRef.current <= -ACTION_WIDTH / 2
-                    ? -ACTION_WIDTH
+                offsetRef.current <= -actionsWidth / 2
+                    ? -actionsWidth
                     : 0,
             )
         }
@@ -225,18 +231,42 @@ export function SwipeToReveal({
                 <div
                     id={actionsId}
                     className="swipe-row__actions"
+                    style={{ width: actionsWidth }}
                     aria-hidden={!open}
+                    onKeyDown={(event) => {
+                        if (event.key === 'Escape') {
+                            event.preventDefault()
+                            event.stopPropagation()
+                            updateOffset(0)
+                        }
+                    }}
                 >
+                    {onRename && (
+                        <button
+                            type="button"
+                            className="swipe-row__rename"
+                            tabIndex={open ? 0 : -1}
+                            aria-label={label + ' umbenennen'}
+                            disabled={isRemoving}
+                            onClick={() => {
+                                updateOffset(0)
+                                onRename()
+                            }}
+                        >
+                            Umbenennen
+                        </button>
+                    )}
+
                     <button
                         type="button"
                         tabIndex={open ? 0 : -1}
-                        aria-label={label + ' aus Liste entfernen'}
+                        aria-label={removeAriaLabel}
                         disabled={isRemoving}
                         onClick={() => {
                             void remove()
                         }}
                     >
-                        {isRemoving ? 'Bitte warten …' : 'Entfernen'}
+                        {isRemoving ? 'Bitte warten …' : removeLabel}
                     </button>
                 </div>
 
@@ -283,7 +313,7 @@ export function SwipeToReveal({
                         aria-controls={actionsId}
                         disabled={isRemoving}
                         onClick={() =>
-                            updateOffset(open ? 0 : -ACTION_WIDTH)
+                            updateOffset(open ? 0 : -actionsWidth)
                         }
                     >
                         <span aria-hidden="true">⋯</span>

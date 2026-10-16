@@ -10,9 +10,17 @@ import { getRankingSize } from '../model/ranking.operations'
 
 interface RankingDetailPageProps {
     list: RankingList
+    catalogItems: readonly {
+        id: ItemId
+        name: string
+    }[]
     getItemName: (itemId: ItemId) => string
     onAddEntry: (
         name: string,
+        position: number,
+    ) => Promise<boolean>
+    onAddExistingEntry: (
+        itemId: ItemId,
         position: number,
     ) => Promise<boolean>
     onUpdateEntry: (
@@ -30,14 +38,19 @@ interface RankingDetailPageProps {
 
 export function RankingDetailPage({
                                       list,
+                                      catalogItems,
                                       getItemName,
                                       onAddEntry,
+                                      onAddExistingEntry,
                                       onUpdateEntry,
                                       onRemoveEntry,
                                       onReorderEntry,
                                       onBack,
                                   }: RankingDetailPageProps) {
+    const [mode, setMode] = useState<'new' | 'existing'>('new')
     const [name, setName] = useState('')
+    const [selectedItemId, setSelectedItemId] =
+        useState<ItemId>('')
     const [positionInput, setPositionInput] = useState('')
     const [error, setError] = useState('')
     const [isAdding, setIsAdding] = useState(false)
@@ -51,6 +64,16 @@ export function RankingDetailPage({
         (entry) => entry.id === editingEntryId,
     )
 
+    const usedItemIds = new Set(
+        list.entries.map((entry) => entry.itemId),
+    )
+
+    const availableProfiles = catalogItems
+        .filter((item) => !usedItemIds.has(item.id))
+        .sort((first, second) =>
+            first.name.localeCompare(second.name, 'de-CH'),
+        )
+
     async function addEntry() {
         if (isAdding) {
             return
@@ -60,13 +83,23 @@ export function RankingDetailPage({
             ? nextPosition
             : Number(positionInput)
 
-        if (name.trim() === '') {
+        if (!Number.isSafeInteger(position) || position < 1) {
+            setError('Bitte gib eine gültige Position ab 1 ein.')
+            return
+        }
+
+        if (mode === 'new' && name.trim() === '') {
             setError('Bitte gib einen Namen ein.')
             return
         }
 
-        if (!Number.isSafeInteger(position) || position < 1) {
-            setError('Bitte gib eine gültige Position ab 1 ein.')
+        if (
+            mode === 'existing' &&
+            !availableProfiles.some(
+                (item) => item.id === selectedItemId,
+            )
+        ) {
+            setError('Bitte wähle ein vorhandenes Profil.')
             return
         }
 
@@ -74,7 +107,12 @@ export function RankingDetailPage({
         setError('')
 
         try {
-            const added = await onAddEntry(name, position)
+            const added = mode === 'new'
+                ? await onAddEntry(name, position)
+                : await onAddExistingEntry(
+                    selectedItemId,
+                    position,
+                )
 
             if (!added) {
                 setError(
@@ -84,6 +122,7 @@ export function RankingDetailPage({
             }
 
             setName('')
+            setSelectedItemId('')
             setPositionInput('')
         } catch {
             setError(
@@ -147,20 +186,91 @@ export function RankingDetailPage({
                     <h2>Eintrag hinzufügen</h2>
 
                     <div>
-                        <label htmlFor="entry-name">Name</label>
+                        <label htmlFor="profile-source">
+                            Profil
+                        </label>
 
-                        <input
-                            id="entry-name"
-                            type="text"
-                            value={name}
-                            onChange={(event) =>
-                                setName(event.target.value)
-                            }
-                            placeholder="Zum Beispiel Nanami"
+                        <select
+                            id="profile-source"
+                            value={mode}
+                            onChange={(event) => {
+                                setMode(
+                                    event.target.value === 'existing'
+                                        ? 'existing'
+                                        : 'new',
+                                )
+                                setError('')
+                            }}
                             disabled={isAdding}
-                            required
-                        />
+                        >
+                            <option value="new">
+                                Neues Profil erstellen
+                            </option>
+                            <option value="existing">
+                                Vorhandenes Profil auswählen
+                            </option>
+                        </select>
                     </div>
+
+                    {mode === 'new' ? (
+                        <div>
+                            <label htmlFor="entry-name">
+                                Name
+                            </label>
+
+                            <input
+                                id="entry-name"
+                                type="text"
+                                value={name}
+                                onChange={(event) =>
+                                    setName(event.target.value)
+                                }
+                                placeholder="Zum Beispiel Nanami"
+                                disabled={isAdding}
+                                required
+                            />
+                        </div>
+                    ) : (
+                        <div>
+                            <label htmlFor="existing-profile">
+                                Vorhandenes Profil
+                            </label>
+
+                            <select
+                                id="existing-profile"
+                                value={selectedItemId}
+                                onChange={(event) =>
+                                    setSelectedItemId(
+                                        event.target.value,
+                                    )
+                                }
+                                disabled={
+                                    isAdding ||
+                                    availableProfiles.length === 0
+                                }
+                                required
+                            >
+                                <option value="">
+                                    Bitte auswählen
+                                </option>
+
+                                {availableProfiles.map((item) => (
+                                    <option
+                                        key={item.id}
+                                        value={item.id}
+                                    >
+                                        {item.name}
+                                    </option>
+                                ))}
+                            </select>
+
+                            {availableProfiles.length === 0 && (
+                                <p>
+                                    Keine weiteren Profile verfügbar.
+                                </p>
+                            )}
+                        </div>
+                    )}
 
                     <div>
                         <label htmlFor="entry-position">
@@ -187,7 +297,16 @@ export function RankingDetailPage({
                         </p>
                     </div>
 
-                    <button type="submit" disabled={isAdding}>
+                    <button
+                        type="submit"
+                        disabled={
+                            isAdding ||
+                            (
+                                mode === 'existing' &&
+                                availableProfiles.length === 0
+                            )
+                        }
+                    >
                         {isAdding
                             ? 'Eintrag wird gespeichert …'
                             : 'Eintrag hinzufügen'}

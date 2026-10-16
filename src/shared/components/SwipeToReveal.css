@@ -13,11 +13,12 @@
 .swipe-row__actions {
     position: absolute;
     inset: 0 0 0 auto;
-    width: 96px;
+    display: flex;
 }
 
 .swipe-row__actions button {
-    width: 100%;
+    flex: 1 1 0;
+    min-width: 0;
     height: 100%;
     padding: 0.5rem;
     border: 0;
@@ -25,7 +26,13 @@
     background: #b42338;
     color: white;
     font: inherit;
+    font-size: 0.9rem;
+    overflow-wrap: anywhere;
     cursor: pointer;
+}
+
+.swipe-row__actions .swipe-row__rename {
+    background: #365b9d;
 }
 
 .swipe-row__surface {

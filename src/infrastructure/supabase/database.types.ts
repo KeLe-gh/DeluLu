@@ -127,6 +127,7 @@ export type Database = {
                     id: string
                     owner_id: string
                     revision: number
+                    sort_order: number
                     theme_id: string
                     title: string
                     updated_at: string
@@ -140,6 +141,7 @@ export type Database = {
                     id?: string
                     owner_id?: string
                     revision?: number
+                    sort_order?: number
                     theme_id?: string
                     title: string
                     updated_at?: string
@@ -153,6 +155,7 @@ export type Database = {
                     id?: string
                     owner_id?: string
                     revision?: number
+                    sort_order?: number
                     theme_id?: string
                     title?: string
                     updated_at?: string
@@ -164,6 +167,11 @@ export type Database = {
             [_ in never]: never
         }
         Functions: {
+            delete_ranking_list: {
+                Args: { p_expected_revision: number; p_id: string }
+                Returns: undefined
+            }
+            reorder_ranking_lists: { Args: { p_lists: Json }; Returns: undefined }
             save_catalog_item: {
                 Args: {
                     p_background_image_id?: string
@@ -202,6 +210,7 @@ export type Database = {
                     id: string
                     owner_id: string
                     revision: number
+                    sort_order: number
                     theme_id: string
                     title: string
                     updated_at: string

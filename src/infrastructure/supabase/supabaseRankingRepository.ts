@@ -1,4 +1,6 @@
-import type { RankingRepository } from '../../features/rankings'
+import type {
+    RankingRepository,
+} from '../../features/rankings'
 import { RevisionConflictError } from '../../shared/errors/persistence.errors'
 import { supabase } from './client'
 import { mapRankingList } from './database.mappers'
@@ -88,18 +90,25 @@ export const supabaseRankingRepository: RankingRepository = {
                 }
             }
 
-            return after.map((row) =>
-                mapRankingList(
-                    row,
-                    entriesByList.get(row.id) ?? [],
-                ),
-            )
+            return after
+                .sort(
+                    (first, second) =>
+                        first.sort_order - second.sort_order ||
+                        first.id.localeCompare(second.id),
+                )
+                .map((row) =>
+                    mapRankingList(
+                        row,
+                        entriesByList.get(row.id) ?? [],
+                    ),
+                )
         }
 
         throw new Error(
             'Die Listen wurden während des Ladens geändert. Bitte lade sie erneut.',
         )
     },
+
     async save(list, expectedRevision) {
         const entries = list.entries.map((entry) => ({
             id: entry.id,
@@ -149,5 +158,43 @@ export const supabaseRankingRepository: RankingRepository = {
         )
 
         return mapRankingList(data, savedEntries)
+    },
+
+    async remove(listId, expectedRevision) {
+        const { error } = await supabase.rpc(
+            'delete_ranking_list',
+            {
+                p_id: listId,
+                p_expected_revision: expectedRevision,
+            },
+        )
+
+        if (error) {
+            if (error.code === 'PT409') {
+                throw new RevisionConflictError()
+            }
+
+            throw error
+        }
+    },
+
+    async reorder(orderedLists) {
+        const { error } = await supabase.rpc(
+            'reorder_ranking_lists',
+            {
+                p_lists: orderedLists.map((list) => ({
+                    id: list.value.id,
+                    revision: list.revision,
+                })),
+            },
+        )
+
+        if (error) {
+            if (error.code === 'PT409') {
+                throw new RevisionConflictError()
+            }
+
+            throw error
+        }
     },
 }

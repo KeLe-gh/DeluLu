@@ -52,7 +52,7 @@ function upsert<T extends { id: string }>(
     )
 
     if (!exists) {
-        return [...records, saved]
+        return [saved, ...records]
     }
 
     return records.map((record) =>
@@ -61,7 +61,6 @@ function upsert<T extends { id: string }>(
             : record,
     )
 }
-
 async function readRecords(
     catalogRepository: CatalogRepository,
     rankingRepository: RankingRepository,
@@ -173,10 +172,10 @@ export function useRankingWorkspace({
         setLoadRequest((current) => current + 1)
     }
 
-    async function save(
-        buildInput: (
+    async function mutate(
+        action: (
             current: WorkspaceRecords,
-        ) => SaveRankingInput | null,
+        ) => Promise<WorkspaceRecords | null>,
     ): Promise<boolean> {
         if (busyRef.current || needsReloadRef.current) {
             return false
@@ -189,35 +188,24 @@ export function useRankingWorkspace({
         setError('')
 
         try {
-            const input = buildInput(recordsRef.current)
-
-            if (input === null) {
-                setError(
-                    'Die Eingaben sind ungültig oder der Eintrag wurde nicht gefunden.',
-                )
-                return false
-            }
-
-            const saved = await editorRepository.save(input)
+            const next = await action(recordsRef.current)
 
             if (generation !== generationRef.current) {
                 return false
             }
 
-            const current = recordsRef.current
-
-            const next: WorkspaceRecords = {
-                lists: upsert(current.lists, saved.list),
-                items: saved.catalogItem === null
-                    ? current.items
-                    : upsert(current.items, saved.catalogItem),
+            if (next === null) {
+                setError(
+                    'Die Eingaben sind ungültig oder die Daten wurden nicht gefunden.',
+                )
+                return false
             }
 
             recordsRef.current = next
             setRecords(next)
 
             return true
-        } catch (saveError) {
+        } catch (mutationError) {
             if (generation !== generationRef.current) {
                 return false
             }
@@ -226,9 +214,9 @@ export function useRankingWorkspace({
             setNeedsReload(true)
 
             setError(
-                saveError instanceof RevisionConflictError
+                mutationError instanceof RevisionConflictError
                     ? 'Die gespeicherten Daten wurden geändert. Bitte lade sie erneut und prüfe deine Eingaben.'
-                    : 'Das Speichern konnte nicht bestätigt werden. Bitte lade die Daten erneut, bevor du weitere Änderungen machst.',
+                    : 'Die Änderung konnte nicht bestätigt werden. Bitte lade die Daten erneut, bevor du weitere Änderungen machst.',
             )
 
             return false
@@ -238,6 +226,29 @@ export function useRankingWorkspace({
                 setIsSaving(false)
             }
         }
+    }
+
+    function save(
+        buildInput: (
+            current: WorkspaceRecords,
+        ) => SaveRankingInput | null,
+    ): Promise<boolean> {
+        return mutate(async (current) => {
+            const input = buildInput(current)
+
+            if (input === null) {
+                return null
+            }
+
+            const saved = await editorRepository.save(input)
+
+            return {
+                lists: upsert(current.lists, saved.list),
+                items: saved.catalogItem === null
+                    ? current.items
+                    : upsert(current.items, saved.catalogItem),
+            }
+        })
     }
 
     function createList(title: string): Promise<boolean> {
@@ -251,6 +262,113 @@ export function useRankingWorkspace({
             return list === null
                 ? null
                 : { list, expectedRevision: null }
+        })
+    }
+
+    function changeList(
+        listId: ListId,
+        operation: (list: RankingList) => RankingList | null,
+    ): Promise<boolean> {
+        return save((current) => {
+            const storedList = current.lists.find(
+                (list) => list.value.id === listId,
+            )
+
+            if (!storedList) {
+                return null
+            }
+
+            const list = operation(storedList.value)
+
+            return list === null
+                ? null
+                : {
+                    list,
+                    expectedRevision: storedList.revision,
+                }
+        })
+    }
+
+    function renameList(
+        listId: ListId,
+        title: string,
+    ): Promise<boolean> {
+        return changeList(listId, (list) => {
+            const trimmedTitle = title.trim()
+
+            if (trimmedTitle === '') {
+                return null
+            }
+
+            return {
+                ...list,
+                title: trimmedTitle,
+                updatedAt: new Date().toISOString(),
+            }
+        })
+    }
+
+    function deleteList(listId: ListId): Promise<boolean> {
+        return mutate(async (current) => {
+            const storedList = current.lists.find(
+                (list) => list.value.id === listId,
+            )
+
+            if (!storedList) {
+                return null
+            }
+
+            await rankingRepository.remove(
+                listId,
+                storedList.revision,
+            )
+
+            return {
+                lists: current.lists.filter(
+                    (list) => list.value.id !== listId,
+                ),
+                items: current.items,
+            }
+        })
+    }
+
+    function reorderList(
+        listId: ListId,
+        toIndex: number,
+    ): Promise<boolean> {
+        return mutate(async (current) => {
+            const fromIndex = current.lists.findIndex(
+                (list) => list.value.id === listId,
+            )
+
+            if (
+                fromIndex < 0 ||
+                !Number.isInteger(toIndex) ||
+                toIndex < 0 ||
+                toIndex >= current.lists.length
+            ) {
+                return null
+            }
+
+            if (fromIndex === toIndex) {
+                return current
+            }
+
+            const ordered = [...current.lists]
+            const [moved] = ordered.splice(fromIndex, 1)
+
+            if (!moved) {
+                return null
+            }
+
+            ordered.splice(toIndex, 0, moved)
+
+            await rankingRepository.reorder(ordered)
+
+            return readRecords(
+                catalogRepository,
+                rankingRepository,
+            )
         })
     }
 
@@ -299,6 +417,40 @@ export function useRankingWorkspace({
                     expectedRevision: null,
                 },
             }
+        })
+    }
+
+    function addExistingEntry(
+        listId: ListId,
+        itemId: ItemId,
+        position: number,
+    ): Promise<boolean> {
+        return save((current) => {
+            const storedList = current.lists.find(
+                (list) => list.value.id === listId,
+            )
+
+            const itemExists = current.items.some(
+                (item) => item.value.id === itemId,
+            )
+
+            if (!storedList || !itemExists) {
+                return null
+            }
+
+            const list = addRankingEntry(storedList.value, {
+                id: crypto.randomUUID(),
+                itemId,
+                position,
+                timestamp: new Date().toISOString(),
+            })
+
+            return list === null
+                ? null
+                : {
+                    list,
+                    expectedRevision: storedList.revision,
+                }
         })
     }
 
@@ -358,30 +510,6 @@ export function useRankingWorkspace({
         })
     }
 
-    function changeList(
-        listId: ListId,
-        operation: (list: RankingList) => RankingList | null,
-    ): Promise<boolean> {
-        return save((current) => {
-            const storedList = current.lists.find(
-                (list) => list.value.id === listId,
-            )
-
-            if (!storedList) {
-                return null
-            }
-
-            const list = operation(storedList.value)
-
-            return list === null
-                ? null
-                : {
-                    list,
-                    expectedRevision: storedList.revision,
-                }
-        })
-    }
-
     function removeEntry(
         listId: ListId,
         entryId: EntryId,
@@ -418,9 +546,14 @@ export function useRankingWorkspace({
 
     return {
         lists: records.lists.map((list) => list.value),
+        items: records.items.map((item) => item.value),
         getItemName,
         createList,
+        renameList,
+        deleteList,
+        reorderList,
         addEntry,
+        addExistingEntry,
         updateEntry,
         removeEntry,
         reorderEntry,
