@@ -1,7 +1,6 @@
 import { useRef, useState } from 'react'
-import type {
-    RankingList,
-} from '../../../shared/types/list.types'
+import { Modal } from '../../../shared/components/Modal'
+import type { RankingList } from '../../../shared/types/list.types'
 
 interface RankingListManagerProps {
     list: RankingList
@@ -36,17 +35,11 @@ export function RankingListManager({
         setError('')
 
         try {
-            const saved = await onRename(trimmedTitle)
-
-            if (!saved) {
-                setError(
-                    'Die Liste konnte nicht umbenannt werden.',
-                )
+            if (!await onRename(trimmedTitle)) {
+                setError('Die Liste konnte nicht umbenannt werden.')
             }
         } catch {
-            setError(
-                'Die Liste konnte nicht umbenannt werden.',
-            )
+            setError('Die Liste konnte nicht umbenannt werden.')
         } finally {
             pendingRef.current = false
             setPending(false)
@@ -54,47 +47,43 @@ export function RankingListManager({
     }
 
     return (
-        <main>
-            <h1>Liste umbenennen</h1>
-            <p>Gespeicherter Listenname: {list.title}</p>
-
+        <Modal
+            title="Liste umbenennen"
+            busy={pending}
+            onClose={onCancel}
+        >
             <form
                 onSubmit={(event) => {
                     event.preventDefault()
                     void rename()
                 }}
             >
-                <label htmlFor="rename-list-title">
-                    Listenname
-                </label>
+                <div>
+                    <label htmlFor="rename-list-title">
+                        Listenname
+                    </label>
 
-                <input
-                    id="rename-list-title"
-                    type="text"
-                    value={title}
-                    onChange={(event) =>
-                        setTitle(event.target.value)
-                    }
-                    disabled={pending}
-                    required
-                />
+                    <input
+                        id="rename-list-title"
+                        type="text"
+                        autoFocus
+                        value={title}
+                        onChange={(event) =>
+                            setTitle(event.target.value)
+                        }
+                        disabled={pending}
+                        required
+                    />
+                </div>
 
-                <button type="submit" disabled={pending}>
-                    {pending
-                        ? 'Name wird gespeichert …'
-                        : 'Umbenennen'}
-                </button>
+                <p>Gespeicherter Listenname: {list.title}</p>
 
                 {error && <p role="alert">{error}</p>}
-            </form>
 
-            <button
-                type="button"
-                onClick={onCancel}
-                disabled={pending}
-            >
-                Abbrechen
-            </button>
-        </main>
+                <button type="submit" disabled={pending}>
+                    {pending ? 'Name wird gespeichert …' : 'Speichern'}
+                </button>
+            </form>
+        </Modal>
     )
 }

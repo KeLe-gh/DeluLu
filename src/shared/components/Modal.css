@@ -1,0 +1,114 @@
+.modal {
+    box-sizing: border-box;
+    width: min(28rem, calc(100% - 2rem));
+    max-height: calc(100dvh - 2rem);
+    margin: auto;
+    padding: 1.5rem;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    border: 1px solid var(--border, #d8d2df);
+    border-radius: 18px;
+    background: var(--bg, Canvas);
+    color: var(--text-h, CanvasText);
+    font: inherit;
+    text-align: left;
+    box-shadow: 0 20px 70px rgb(0 0 0 / 30%);
+}
+
+.modal::backdrop {
+    background: rgb(0 0 0 / 45%);
+}
+
+.modal h2 {
+    margin: 0 0 1.25rem;
+}
+
+.modal__fields {
+    min-inline-size: 0;
+    margin: 0;
+    padding: 0;
+    border: 0;
+}
+
+.modal form {
+    display: grid;
+    gap: 1rem;
+}
+
+.modal form > div {
+    display: grid;
+    gap: 0.4rem;
+}
+
+.modal input {
+    box-sizing: border-box;
+    width: 100%;
+    min-width: 0;
+    padding: 0.75rem;
+    border: 1px solid var(--border, #d8d2df);
+    border-radius: 10px;
+    background: var(--bg, Canvas);
+    color: inherit;
+    font: inherit;
+    font-size: max(1rem, 16px);
+}
+
+.modal p {
+    overflow-wrap: anywhere;
+}
+
+.modal button {
+    box-sizing: border-box;
+    min-height: 44px;
+    margin: 0;
+    padding: 0.7rem 1rem;
+    border: 1px solid var(--border, #d8d2df);
+    border-radius: 10px;
+    background: var(--bg, Canvas);
+    color: inherit;
+    font: inherit;
+    cursor: pointer;
+}
+
+.modal button[type="submit"] {
+    border-color: #7443bb;
+    background: #7443bb;
+    color: white;
+    font-weight: 600;
+}
+
+.modal button.modal__danger {
+    border-color: #b42338;
+    color: #b42338;
+}
+
+.modal button:disabled {
+    opacity: 0.55;
+    cursor: default;
+}
+
+.modal :focus-visible {
+    outline: 2px solid var(--accent, #7443bb);
+    outline-offset: 3px;
+}
+
+.modal__feedback section {
+    display: grid;
+    gap: 0.75rem;
+}
+
+.modal__feedback p,
+.modal__feedback button {
+    margin-top: 0.75rem;
+}
+
+.modal__cancel {
+    width: 100%;
+    margin-top: 0.75rem !important;
+}
+
+@media (max-width: 480px) {
+    .modal {
+        padding: 1rem;
+    }
+}

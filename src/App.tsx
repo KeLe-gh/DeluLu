@@ -8,6 +8,7 @@ import { supabaseAuthService } from './infrastructure/supabase/supabaseAuthServi
 import { supabaseCatalogRepository } from './infrastructure/supabase/supabaseCatalogRepository'
 import { supabaseRankingRepository } from './infrastructure/supabase/supabaseRankingRepository'
 import { supabaseRankingEditorRepository } from './infrastructure/supabase/supabaseRankingEditorRepository'
+import { ModalFeedbackContext } from './shared/components/ModalFeedbackContext'
 import './App.css'
 
 type Screen = 'home' | 'lists' | 'rankings'
@@ -24,33 +25,39 @@ function DeluluApp() {
     const busy = workspace.isLoading || workspace.isSaving
     const blocked = busy || workspace.needsReload
 
+    const feedback = (
+        <section aria-label="Datenstatus">
+            {workspace.isLoading && (
+                <p role="status">Daten werden geladen …</p>
+            )}
+
+            {workspace.isSaving && (
+                <p role="status">
+                    Änderungen werden gespeichert …
+                </p>
+            )}
+
+            {workspace.error && (
+                <p role="alert">{workspace.error}</p>
+            )}
+
+            {workspace.needsReload && (
+                <button
+                    type="button"
+                    onClick={workspace.reload}
+                    disabled={busy}
+                >
+                    Daten erneut laden
+                </button>
+            )}
+        </section>
+    )
+
     return (
-        <>
-            <section aria-label="Datenstatus">
-                {workspace.isLoading && (
-                    <p role="status">Daten werden geladen …</p>
-                )}
-
-                {workspace.isSaving && (
-                    <p role="status">
-                        Änderungen werden gespeichert …
-                    </p>
-                )}
-
-                {workspace.error && (
-                    <p role="alert">{workspace.error}</p>
-                )}
-
-                {workspace.needsReload && (
-                    <button
-                        type="button"
-                        onClick={workspace.reload}
-                        disabled={busy}
-                    >
-                        Daten erneut laden
-                    </button>
-                )}
-            </section>
+        <ModalFeedbackContext.Provider
+            value={{ busy, blocked, content: feedback }}
+        >
+            {feedback}
 
             {workspace.hasLoaded && (
                 <div inert={blocked} aria-busy={busy}>
@@ -105,7 +112,7 @@ function DeluluApp() {
                     )}
                 </div>
             )}
-        </>
+        </ModalFeedbackContext.Provider>
     )
 }
 

@@ -1,4 +1,5 @@
 import { useRef, useState } from 'react'
+import { Modal } from '../../../shared/components/Modal'
 
 interface RankingEntryEditorProps {
     name: string
@@ -69,83 +70,81 @@ export function RankingEntryEditor({
     }
 
     return (
-        <form
-            onSubmit={(event) => {
-                event.preventDefault()
-                void save()
-            }}
+        <Modal
+            title="Eintrag bearbeiten"
+            busy={pending}
+            onClose={onCancel}
         >
-            <h2>Eintrag bearbeiten</h2>
-
-            <div>
-                <label htmlFor="edit-entry-name">Name</label>
-
-                <input
-                    id="edit-entry-name"
-                    type="text"
-                    value={editedName}
-                    onChange={(event) =>
-                        setEditedName(event.target.value)
-                    }
-                    disabled={pending}
-                    required
-                />
-            </div>
-
-            <p>
-                Eine Namensänderung gilt für dieses Profil
-                in allen Listen, die es verwenden.
-            </p>
-
-            <div>
-                <label htmlFor="edit-entry-position">
-                    Position
-                </label>
-
-                <input
-                    id="edit-entry-position"
-                    type="number"
-                    min="1"
-                    step="1"
-                    value={editedPosition}
-                    onChange={(event) =>
-                        setEditedPosition(event.target.value)
-                    }
-                    disabled={pending}
-                    required
-                />
-            </div>
-
-            <p>
-                Gespeicherter Stand: {name}, Position {position}.
-            </p>
-
-            {error && <p role="alert">{error}</p>}
-
-            <button type="submit" disabled={pending}>
-                {pending ? 'Bitte warten …' : 'Änderungen speichern'}
-            </button>
-
-            <button
-                type="button"
-                onClick={onCancel}
-                disabled={pending}
-            >
-                Abbrechen
-            </button>
-
-            <button
-                type="button"
-                onClick={() => {
-                    void perform(
-                        onRemove,
-                        'Der Eintrag konnte nicht entfernt werden.',
-                    )
+            <form
+                onSubmit={(event) => {
+                    event.preventDefault()
+                    void save()
                 }}
-                disabled={pending}
             >
-                Aus Liste entfernen
-            </button>
-        </form>
+                <div>
+                    <label htmlFor="edit-entry-name">Name</label>
+
+                    <input
+                        id="edit-entry-name"
+                        type="text"
+                        autoFocus
+                        value={editedName}
+                        onChange={(event) =>
+                            setEditedName(event.target.value)
+                        }
+                        disabled={pending}
+                        required
+                    />
+                </div>
+
+                <p>
+                    Eine Namensänderung gilt für dieses Profil
+                    in allen Listen, die es verwenden.
+                </p>
+
+                <div>
+                    <label htmlFor="edit-entry-position">
+                        Position
+                    </label>
+
+                    <input
+                        id="edit-entry-position"
+                        type="number"
+                        min="1"
+                        step="1"
+                        value={editedPosition}
+                        onChange={(event) =>
+                            setEditedPosition(event.target.value)
+                        }
+                        disabled={pending}
+                        required
+                    />
+                </div>
+
+                <p>
+                    Gespeicherter Stand: {name}, Position {position}.
+                </p>
+
+                {error && <p role="alert">{error}</p>}
+
+                <button type="submit" disabled={pending}>
+                    {pending ? 'Bitte warten …' : 'Speichern'}
+                </button>
+
+                <button
+                    type="button"
+                    className="modal__danger"
+                    onClick={() => {
+                        void perform(
+                            onRemove,
+                            'Der Eintrag konnte nicht entfernt werden.',
+                        )
+                    }}
+                    disabled={pending}
+                >
+                    Aus Liste entfernen
+                </button>
+            </form>
+        </Modal>
     )
 }

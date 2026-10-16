@@ -154,31 +154,29 @@ export function RankingsPage({
         )
     }
 
-    if (managedList) {
-        return (
-            <RankingListManager
-                key={managedList.id}
-                list={managedList}
-                onRename={async (title) => {
-                    const saved = await onRenameList(
-                        managedList.id,
-                        title,
-                    )
-
-                    if (saved) {
-                        setManagedListId(null)
-                    }
-
-                    return saved
-                }}
-                onCancel={() => setManagedListId(null)}
-            />
-        )
-    }
-
     return (
         <main>
             <h1>Meine Top-Listen</h1>
+
+            {managedList && (
+                <RankingListManager
+                    key={managedList.id}
+                    list={managedList}
+                    onRename={async (title) => {
+                        const saved = await onRenameList(
+                            managedList.id,
+                            title,
+                        )
+
+                        if (saved) {
+                            setManagedListId(null)
+                        }
+
+                        return saved
+                    }}
+                    onCancel={() => setManagedListId(null)}
+                />
+            )}
 
             <form
                 onSubmit={(event) => {
