@@ -169,11 +169,16 @@ export function SwipeToReveal({
         setSwiping(false)
 
         if (gesture.axis === 'horizontal') {
-            updateOffset(
-                offsetRef.current <= -actionsWidth / 2
-                    ? -actionsWidth
-                    : 0,
-            )
+            const distance =
+                offsetRef.current - gesture.startOffset
+
+            if (distance <= -24) {
+                updateOffset(-actionsWidth)
+            } else if (distance >= 24) {
+                updateOffset(0)
+            } else {
+                updateOffset(gesture.startOffset)
+            }
         }
 
         if (
