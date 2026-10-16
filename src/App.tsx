@@ -11,6 +11,8 @@ import { supabaseCatalogRepository } from './infrastructure/supabase/supabaseCat
 import { supabaseRankingRepository } from './infrastructure/supabase/supabaseRankingRepository'
 import { supabaseRankingEditorRepository } from './infrastructure/supabase/supabaseRankingEditorRepository'
 import { ModalFeedbackContext } from './shared/components/ModalFeedbackContext'
+import { ProfileImageContext } from './features/images/ProfileImageContext'
+import { supabaseProfileImageStore } from './infrastructure/supabase/supabaseProfileImageStore'
 import './App.css'
 
 type Workspace = ReturnType<typeof useRankingWorkspace>
@@ -103,8 +105,9 @@ function WorkspaceScreen({
                     createOpen={createOpen}
                     onCloseCreate={() => setCreateOpen(false)}
                     getItemName={workspace.getItemName}
-                    onAddEntry={(name, position) =>
-                        workspace.addEntry(list.id, name, position)
+                    getItemImageId={workspace.getItemImageId}
+                    onAddEntry={(name, position, photo) =>
+                        workspace.addEntry(list.id, name, position, photo)
                     }
                     onAddExistingEntry={(id, position) =>
                         workspace.addExistingEntry(list.id, id, position)
@@ -133,6 +136,7 @@ function DeluluApp() {
         catalogRepository: supabaseCatalogRepository,
         rankingRepository: supabaseRankingRepository,
         editorRepository: supabaseRankingEditorRepository,
+        imageStore: supabaseProfileImageStore,
     })
     const busy = workspace.isLoading || workspace.isSaving
     const blocked = busy || workspace.needsReload
@@ -175,7 +179,9 @@ function DeluluApp() {
 function App() {
     return (
         <AuthGate authService={supabaseAuthService}>
-            <DeluluApp />
+            <ProfileImageContext.Provider value={supabaseProfileImageStore}>
+                <DeluluApp />
+            </ProfileImageContext.Provider>
         </AuthGate>
     )
 }

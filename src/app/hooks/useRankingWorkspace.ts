@@ -18,6 +18,7 @@ import {
     reorderRankingEntries,
 } from '../../features/rankings/model/ranking.operations'
 import { RevisionConflictError } from '../../shared/errors/persistence.errors'
+import type { ProfileImageStore } from '../../features/images/model/profileImageStore'
 import type {
     EntryId,
     ItemId,
@@ -36,6 +37,7 @@ interface WorkspaceDependencies {
     catalogRepository: CatalogRepository
     rankingRepository: RankingRepository
     editorRepository: RankingEditorRepository
+    imageStore: ProfileImageStore
 }
 
 interface WorkspaceRecords {
@@ -89,6 +91,7 @@ export function useRankingWorkspace({
                                         catalogRepository,
                                         rankingRepository,
                                         editorRepository,
+                                        imageStore,
                                     }: WorkspaceDependencies) {
     const [records, setRecords] = useState<WorkspaceRecords>({
         lists: [],
@@ -232,12 +235,20 @@ export function useRankingWorkspace({
         buildInput: (
             current: WorkspaceRecords,
         ) => SaveRankingInput | null,
+        photo?: Blob | null,
     ): Promise<boolean> {
         return mutate(async (current) => {
             const input = buildInput(current)
 
             if (input === null) {
                 return null
+            }
+
+            if (photo && input.catalogChange) {
+                input.catalogChange.item = {
+                    ...input.catalogChange.item,
+                    profileImageId: await imageStore.upload(photo),
+                }
             }
 
             const saved = await editorRepository.save(input)
@@ -376,6 +387,7 @@ export function useRankingWorkspace({
         listId: ListId,
         name: string,
         position: number,
+        photo?: Blob | null,
     ): Promise<boolean> {
         return save((current) => {
             const storedList = current.lists.find(
@@ -417,7 +429,7 @@ export function useRankingWorkspace({
                     expectedRevision: null,
                 },
             }
-        })
+        }, photo)
     }
 
     function addExistingEntry(
@@ -544,10 +556,15 @@ export function useRankingWorkspace({
         )
     }
 
+    function getItemImageId(itemId: ItemId): string | null {
+        return records.items.find((item) => item.value.id === itemId)?.value.profileImageId ?? null
+    }
+
     return {
         lists: records.lists.map((list) => list.value),
         items: records.items.map((item) => item.value),
         getItemName,
+        getItemImageId,
         createList,
         renameList,
         deleteList,

@@ -20,6 +20,7 @@ import type {
     RankingListEntry,
 } from '../../../shared/types/list.types'
 import { SwipeToReveal } from '../../../shared/components/SwipeToReveal'
+import { ProfilePhoto } from '../../images/components/ProfilePhoto'
 import './RankingEntries.css'
 
 const rankingSensors = [
@@ -47,6 +48,7 @@ const rankingSensors = [
 interface SortableRankingEntriesProps {
     entries: readonly RankingListEntry[]
     getItemName: (itemId: ItemId) => string
+    getItemImageId: (itemId: ItemId) => string | null
     onEdit: (entryId: EntryId) => void
     onRemove: (entryId: EntryId) => Promise<boolean>
     onReorder: (
@@ -58,6 +60,7 @@ interface SortableRankingEntriesProps {
 interface SortableEntryProps {
     entry: RankingListEntry
     name: string
+    imageId: string | null
     index: number
     onEdit: () => void
     onRemove: () => Promise<boolean>
@@ -66,6 +69,7 @@ interface SortableEntryProps {
 function SortableEntry({
                            entry,
                            name,
+                           imageId,
                            index,
                            onEdit,
                            onRemove,
@@ -107,6 +111,8 @@ function SortableEntry({
                         {entry.position}.
                     </span>
 
+                    {imageId && <ProfilePhoto imageId={imageId} name={name} />}
+
                     <span className="ranking-entry__name">
                         {name}
                     </span>
@@ -138,6 +144,7 @@ function SortableEntry({
 export function SortableRankingEntries({
                                            entries,
                                            getItemName,
+                                           getItemImageId,
                                            onEdit,
                                            onRemove,
                                            onReorder,
@@ -243,6 +250,7 @@ export function SortableRankingEntries({
                             entry={entry}
                             index={index}
                             name={getItemName(entry.itemId)}
+                            imageId={getItemImageId(entry.itemId)}
                             onEdit={() => {
                                 if (
                                     Date.now() >=

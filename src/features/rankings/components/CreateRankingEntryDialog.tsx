@@ -2,11 +2,13 @@ import { useRef, useState } from 'react'
 import { Modal } from '../../../shared/components/Modal'
 import type { ItemId, RankingList } from '../../../shared/types/list.types'
 import { getRankingSize } from '../model/ranking.operations'
+import { PhotoPicker } from '../../images/components/PhotoPicker'
+import { ProfilePhoto } from '../../images/components/ProfilePhoto'
 
 interface CreateRankingEntryDialogProps {
     list: RankingList
-    catalogItems: readonly { id: ItemId; name: string }[]
-    onAddEntry: (name: string, position: number) => Promise<boolean>
+    catalogItems: readonly { id: ItemId; name: string; profileImageId: string | null }[]
+    onAddEntry: (name: string, position: number, photo?: Blob | null) => Promise<boolean>
     onAddExistingEntry: (itemId: ItemId, position: number) => Promise<boolean>
     onClose: () => void
 }
@@ -23,6 +25,8 @@ export function CreateRankingEntryDialog({
     const [itemId, setItemId] = useState('')
     const [position, setPosition] = useState(String(getRankingSize(list) + 1))
     const [pending, setPending] = useState(false)
+    const [photo, setPhoto] = useState<Blob | null>(null)
+    const [preparingPhoto, setPreparingPhoto] = useState(false)
     const [error, setError] = useState('')
     const pendingRef = useRef(false)
 
@@ -32,7 +36,7 @@ export function CreateRankingEntryDialog({
         .sort((a, b) => a.name.localeCompare(b.name, 'de-CH'))
 
     async function save() {
-        if (pendingRef.current) return
+        if (pendingRef.current || preparingPhoto) return
         const newPosition = Number(position)
 
         if (!Number.isSafeInteger(newPosition) || newPosition < 1) {
@@ -54,7 +58,7 @@ export function CreateRankingEntryDialog({
 
         try {
             const saved = mode === 'new'
-                ? await onAddEntry(name.trim(), newPosition)
+                ? await onAddEntry(name.trim(), newPosition, photo)
                 : await onAddExistingEntry(itemId, newPosition)
 
             if (saved) {
@@ -71,7 +75,7 @@ export function CreateRankingEntryDialog({
     }
 
     return (
-        <Modal title="Neuer Eintrag" busy={pending} onClose={onClose}>
+        <Modal title="Neuer Eintrag" busy={pending || preparingPhoto} onClose={onClose}>
             <form onSubmit={(event) => {
                 event.preventDefault()
                 void save()
@@ -128,6 +132,21 @@ export function CreateRankingEntryDialog({
                         )}
                     </div>
                 )}
+
+                {mode === 'new' ? (
+                    <PhotoPicker
+                        imageId={null}
+                        value={photo}
+                        onChange={(value) => setPhoto(value ?? null)}
+                        onBusyChange={setPreparingPhoto}
+                        name={name}
+                    />
+                ) : itemId ? (
+                    <ProfilePhoto
+                        imageId={available.find((item) => item.id === itemId)?.profileImageId ?? null}
+                        name={available.find((item) => item.id === itemId)?.name}
+                    />
+                ) : null}
 
                 <div>
                     <label htmlFor="new-entry-position">Position</label>

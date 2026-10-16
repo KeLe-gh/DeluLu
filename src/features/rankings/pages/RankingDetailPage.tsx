@@ -7,11 +7,12 @@ import { getRankingSize } from '../model/ranking.operations'
 
 interface RankingDetailPageProps {
     list: RankingList
-    catalogItems: readonly { id: ItemId; name: string }[]
+    catalogItems: readonly { id: ItemId; name: string; profileImageId: string | null }[]
     createOpen: boolean
     onCloseCreate: () => void
     getItemName: (itemId: ItemId) => string
-    onAddEntry: (name: string, position: number) => Promise<boolean>
+    getItemImageId: (itemId: ItemId) => string | null
+    onAddEntry: (name: string, position: number, photo?: Blob | null) => Promise<boolean>
     onAddExistingEntry: (itemId: ItemId, position: number) => Promise<boolean>
     onUpdateEntry: (
         entryId: EntryId,
@@ -28,6 +29,7 @@ export function RankingDetailPage({
     createOpen,
     onCloseCreate,
     getItemName,
+    getItemImageId,
     onAddEntry,
     onAddExistingEntry,
     onUpdateEntry,
@@ -83,6 +85,7 @@ export function RankingDetailPage({
                 <SortableRankingEntries
                     entries={list.entries}
                     getItemName={getItemName}
+                    getItemImageId={getItemImageId}
                     onEdit={setEditingEntryId}
                     onRemove={onRemoveEntry}
                     onReorder={onReorderEntry}

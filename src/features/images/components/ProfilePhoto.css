@@ -1,0 +1,25 @@
+.profile-photo {
+    display: inline-grid;
+    place-items: center;
+    flex: 0 0 48px;
+    width: 48px;
+    height: 48px;
+    overflow: hidden;
+    border-radius: 14px;
+    background: var(--accent-bg);
+    color: var(--accent);
+    font-size: 1.2rem;
+    font-weight: 650;
+    pointer-events: none;
+}
+.profile-photo img { width: 100%; height: 100%; object-fit: cover; }
+.modal form > .photo-picker { display: flex; flex-wrap: wrap; align-items: center; gap: 1rem; }
+.photo-picker .profile-photo { flex-basis: 84px; width: 84px; height: 84px; border-radius: 20px; font-size: 2rem; }
+.photo-picker__actions { display: grid; gap: 0.4rem; }
+.modal input.photo-picker__input { width: 1px; height: 1px; min-height: 0; padding: 0; border: 0; }
+.photo-picker p { flex-basis: 100%; }
+.photo-picker input:focus-visible + button { outline: 2px solid var(--accent); outline-offset: 3px; }
+@media (max-width: 360px) {
+    .ranking-entry__edit { padding: 0.75rem; gap: 0.5rem; }
+    .ranking-entry__edit .profile-photo { flex-basis: 40px; width: 40px; height: 40px; border-radius: 12px; }
+}
