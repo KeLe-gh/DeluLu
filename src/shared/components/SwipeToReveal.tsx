@@ -280,7 +280,11 @@ export function SwipeToReveal({
                     onPointerMove={move}
                     onPointerUp={finish}
                     onPointerCancel={cancel}
-                    onLostPointerCapture={cancel}
+                    onLostPointerCapture={(event) => {
+                        if (event.target === event.currentTarget) {
+                            cancel(event)
+                        }
+                    }}
                     onClickCapture={handleClick}
                     onKeyDown={(event) => {
                         const target = event.target

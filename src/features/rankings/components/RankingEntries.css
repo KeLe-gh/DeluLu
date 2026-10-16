@@ -32,15 +32,11 @@
     font: inherit;
     text-align: left;
     overflow-wrap: anywhere;
-    cursor: grab;
+    cursor: pointer;
     touch-action: pan-y pinch-zoom;
     user-select: none;
     -webkit-user-select: none;
     -webkit-touch-callout: none;
-}
-
-.ranking-entry__edit:active {
-    cursor: grabbing;
 }
 
 .ranking-entry__position {
@@ -59,4 +55,31 @@
     flex-shrink: 0;
     opacity: 0.55;
     font-size: 1.25rem;
+}
+
+.ranking-entry__drag {
+    display: flex;
+    flex: 0 0 48px;
+    align-items: center;
+    justify-content: center;
+    min-height: 48px;
+    padding: 0.5rem;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    cursor: grab;
+    touch-action: none;
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-touch-callout: none;
+}
+
+.ranking-entry__drag:active {
+    cursor: grabbing;
+}
+
+.ranking-entry__drag .ranking-entry__grip {
+    pointer-events: none;
 }

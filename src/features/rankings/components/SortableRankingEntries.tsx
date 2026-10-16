@@ -24,23 +24,11 @@ import './RankingEntries.css'
 
 const rankingSensors = [
     PointerSensor.configure({
-        activationConstraints(event: PointerEvent) {
-            if (event.pointerType === 'touch') {
-                return [
-                    new PointerActivationConstraints.Delay({
-                        value: 300,
-                        tolerance: 6,
-                    }),
-                ]
-            }
-
-            return [
-                new PointerActivationConstraints.Distance({
-                    value: 8,
-                    tolerance: { x: 6 },
-                }),
-            ]
-        },
+        activationConstraints: [
+            new PointerActivationConstraints.Distance({
+                value: 6,
+            }),
+        ],
     }),
 
     KeyboardSensor.configure({
@@ -99,7 +87,6 @@ function SortableEntry({
         >
             <SwipeToReveal label={name} onRemove={onRemove}>
                 <button
-                    ref={handleRef}
                     type="button"
                     className="ranking-entry__edit"
                     onClick={onEdit}
@@ -110,8 +97,7 @@ function SortableEntry({
                         name +
                         ', Position ' +
                         entry.position +
-                        ', tippen zum Bearbeiten, ' +
-                        'halten zum Verschieben'
+                        ', tippen zum Bearbeiten'
                     }
                 >
                     <span
@@ -124,7 +110,19 @@ function SortableEntry({
                     <span className="ranking-entry__name">
                         {name}
                     </span>
+                </button>
 
+                <button
+                    ref={handleRef}
+                    type="button"
+                    className="ranking-entry__drag"
+                    data-drag-handle
+                    aria-label={name + ' verschieben'}
+                    title="Zum Verschieben ziehen"
+                    onContextMenu={(event) =>
+                        event.preventDefault()
+                    }
+                >
                     <span
                         className="ranking-entry__grip"
                         aria-hidden="true"
@@ -154,9 +152,9 @@ export function SortableRankingEntries({
     return (
         <>
             <p>
-                Tippen zum Bearbeiten. Zum Sortieren kurz
-                halten und ziehen. Nach links wischen
-                für weitere Aktionen.
+                Tippen zum Bearbeiten. Zum Sortieren den
+                ⠿-Griff ziehen. Nach links über den Namen
+                wischen für weitere Aktionen.
             </p>
 
             <DragDropProvider
@@ -166,15 +164,14 @@ export function SortableRankingEntries({
                     Accessibility.configure({
                         screenReaderInstructions: {
                             draggable:
-                                'Enter zum Bearbeiten. ' +
+                                'Verschiebegriff mit Tab auswählen. ' +
                                 'Leertaste zum Aufnehmen. ' +
                                 'Mit den Pfeiltasten verschieben. ' +
                                 'Leertaste zum Ablegen. ' +
                                 'Escape zum Abbrechen.',
                         },
                         announcements: {
-                            dragstart: () =>
-                                'Eintrag aufgenommen.',
+                            dragstart: () => 'Eintrag aufgenommen.',
 
                             dragover: ({
                                            operation: { source },
