@@ -10,6 +10,7 @@ export interface AuthService {
     ): () => void
 
     signIn(email: string, password: string): Promise<void>
+    signUp(email: string, password: string, inviteToken: string): Promise<void>
 
     signOut(): Promise<void>
 }

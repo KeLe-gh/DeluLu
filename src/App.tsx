@@ -236,11 +236,15 @@ function DeluluApp() {
 }
 
 function App() {
+    const navigation = useAppNavigation()
+
     return (
-        <AuthGate authService={supabaseAuthService}>
-            <ProfileImageContext.Provider
-                value={supabaseProfileImageStore}
-            >
+        <AuthGate
+            authService={supabaseAuthService}
+            path={navigation.path}
+            onNavigate={navigation.navigate}
+        >
+            <ProfileImageContext.Provider value={supabaseProfileImageStore}>
                 <DeluluApp />
             </ProfileImageContext.Provider>
         </AuthGate>

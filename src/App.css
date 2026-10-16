@@ -118,3 +118,12 @@
     font-size: 1.15rem;
     letter-spacing: normal;
 }
+.auth-switch {
+    min-height: 48px;
+    margin-top: 1rem;
+    padding: 0.65rem 0.8rem;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    background: var(--surface);
+    color: var(--accent);
+}
