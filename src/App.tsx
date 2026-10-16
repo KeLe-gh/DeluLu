@@ -1,22 +1,13 @@
 import { useState } from 'react'
 import { HomePage } from './app/HomePage'
+import { useRankingWorkspace } from './app/hooks/useRankingWorkspace'
 import { AuthGate } from './features/auth'
-import {
-  createCatalogItem,
-  renameCatalogItem,
-  useCatalog,
-} from './features/catalog'
 import { ListMenuPage } from './features/lists'
-import {
-  RankingsPage,
-  useRankings,
-} from './features/rankings'
+import { RankingsPage } from './features/rankings'
 import { supabaseAuthService } from './infrastructure/supabase/supabaseAuthService'
-import type {
-  EntryId,
-  ItemId,
-  ListId,
-} from './shared/types/list.types'
+import { supabaseCatalogRepository } from './infrastructure/supabase/supabaseCatalogRepository'
+import { supabaseRankingRepository } from './infrastructure/supabase/supabaseRankingRepository'
+import { supabaseRankingEditorRepository } from './infrastructure/supabase/supabaseRankingEditorRepository'
 import './App.css'
 
 type Screen = 'home' | 'lists' | 'rankings'
@@ -24,149 +15,88 @@ type Screen = 'home' | 'lists' | 'rankings'
 function DeluluApp() {
   const [screen, setScreen] = useState<Screen>('home')
 
-  const {
-    lists,
-    addRankingList,
-    addEntryToRanking,
-    moveEntryInRanking,
-    removeEntryFromRanking,
-    reorderEntryInRanking,
-  } = useRankings()
+  const workspace = useRankingWorkspace({
+    catalogRepository: supabaseCatalogRepository,
+    rankingRepository: supabaseRankingRepository,
+    editorRepository: supabaseRankingEditorRepository,
+  })
 
-  const {
-    items,
-    addCatalogItem,
-    updateCatalogItem,
-  } = useCatalog()
-
-  function getItemName(itemId: ItemId): string {
-    return (
-        items.find((item) => item.id === itemId)?.name ??
-        'Unbekannter Eintrag'
-    )
-  }
-
-  function addEntry(
-      listId: ListId,
-      name: string,
-      position: number,
-  ): boolean {
-    const item = createCatalogItem({
-      id: crypto.randomUUID(),
-      name,
-      timestamp: new Date().toISOString(),
-    })
-
-    if (item === null) {
-      return false
-    }
-
-    const added = addEntryToRanking(
-        listId,
-        item.id,
-        position,
-    )
-
-    if (!added) {
-      return false
-    }
-
-    addCatalogItem(item)
-    return true
-  }
-
-  function updateEntry(
-      listId: ListId,
-      entryId: EntryId,
-      name: string,
-      position: number,
-  ): boolean {
-    const list = lists.find(
-        (currentList) => currentList.id === listId,
-    )
-
-    const entry = list?.entries.find(
-        (currentEntry) => currentEntry.id === entryId,
-    )
-
-    if (!entry) {
-      return false
-    }
-
-    const item = items.find(
-        (currentItem) => currentItem.id === entry.itemId,
-    )
-
-    if (!item) {
-      return false
-    }
-
-    const updatedItem = renameCatalogItem(item, {
-      name,
-      timestamp: new Date().toISOString(),
-    })
-
-    if (updatedItem === null) {
-      return false
-    }
-
-    const moved = moveEntryInRanking(
-        listId,
-        entryId,
-        position,
-    )
-
-    if (!moved) {
-      return false
-    }
-
-    updateCatalogItem(updatedItem)
-    return true
-  }
-
-  if (screen === 'home') {
-    return (
-        <HomePage
-            onOpenLists={() => setScreen('lists')}
-        />
-    )
-  }
+  const busy = workspace.isLoading || workspace.isSaving
+  const blocked = busy || workspace.needsReload
 
   return (
       <>
-        <nav aria-label="Seitennavigation">
-          <button
-              type="button"
-              onClick={() =>
-                  setScreen(
-                      screen === 'rankings'
-                          ? 'lists'
-                          : 'home',
-                  )
-              }
-          >
-            {screen === 'rankings'
-                ? 'Zur Listenübersicht'
-                : 'Zur Startseite'}
-          </button>
-        </nav>
+        <section aria-label="Datenstatus">
+          {workspace.isLoading && (
+              <p role="status">Daten werden geladen …</p>
+          )}
 
-        {screen === 'lists' ? (
-            <ListMenuPage
-                onOpenRankings={() =>
-                    setScreen('rankings')
-                }
-            />
-        ) : (
-            <RankingsPage
-                lists={lists}
-                getItemName={getItemName}
-                onCreateList={addRankingList}
-                onAddEntry={addEntry}
-                onUpdateEntry={updateEntry}
-                onRemoveEntry={removeEntryFromRanking}
-                onReorderEntry={reorderEntryInRanking}
-            />
+          {workspace.isSaving && (
+              <p role="status">
+                Änderungen werden gespeichert …
+              </p>
+          )}
+
+          {workspace.error && (
+              <p role="alert">{workspace.error}</p>
+          )}
+
+          {workspace.needsReload && (
+              <button
+                  type="button"
+                  onClick={workspace.reload}
+                  disabled={busy}
+              >
+                Daten erneut laden
+              </button>
+          )}
+        </section>
+
+        {workspace.hasLoaded && (
+            <div inert={blocked} aria-busy={busy}>
+              {screen === 'home' ? (
+                  <HomePage
+                      onOpenLists={() => setScreen('lists')}
+                  />
+              ) : (
+                  <>
+                    <nav aria-label="Seitennavigation">
+                      <button
+                          type="button"
+                          onClick={() =>
+                              setScreen(
+                                  screen === 'rankings'
+                                      ? 'lists'
+                                      : 'home',
+                              )
+                          }
+                      >
+                        {screen === 'rankings'
+                            ? 'Zur Listenübersicht'
+                            : 'Zur Startseite'}
+                      </button>
+                    </nav>
+
+                    {screen === 'lists' ? (
+                        <ListMenuPage
+                            onOpenRankings={() =>
+                                setScreen('rankings')
+                            }
+                        />
+                    ) : (
+                        <RankingsPage
+                            lists={workspace.lists}
+                            getItemName={workspace.getItemName}
+                            onCreateList={workspace.createList}
+                            onAddEntry={workspace.addEntry}
+                            onUpdateEntry={workspace.updateEntry}
+                            onRemoveEntry={workspace.removeEntry}
+                            onReorderEntry={workspace.reorderEntry}
+                        />
+                    )}
+                  </>
+              )}
+            </div>
         )}
       </>
   )

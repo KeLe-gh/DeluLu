@@ -9,7 +9,7 @@ import './SwipeToReveal.css'
 interface SwipeToRevealProps {
     children: ReactNode
     label: string
-    onRemove: () => boolean
+    onRemove: () => boolean | Promise<boolean>
 }
 
 interface Gesture {
@@ -33,10 +33,12 @@ export function SwipeToReveal({
     const [offset, setOffset] = useState(0)
     const [swiping, setSwiping] = useState(false)
     const [error, setError] = useState('')
+    const [isRemoving, setIsRemoving] = useState(false)
 
     const offsetRef = useRef(0)
     const gestureRef = useRef<Gesture | null>(null)
     const suppressClick = useRef(false)
+    const removingRef = useRef(false)
 
     const open = offset === -ACTION_WIDTH
 
@@ -45,8 +47,37 @@ export function SwipeToReveal({
         setOffset(value)
     }
 
+    async function remove() {
+        if (removingRef.current) {
+            return
+        }
+
+        removingRef.current = true
+        setIsRemoving(true)
+        setError('')
+
+        try {
+            if (!await onRemove()) {
+                setError(
+                    'Der Eintrag konnte nicht entfernt werden.',
+                )
+            }
+        } catch {
+            setError(
+                'Der Eintrag konnte nicht entfernt werden.',
+            )
+        } finally {
+            removingRef.current = false
+            setIsRemoving(false)
+        }
+    }
+
     function start(event: PointerEvent<HTMLDivElement>) {
-        if (!event.isPrimary || event.button !== 0) {
+        if (
+            !event.isPrimary ||
+            event.button !== 0 ||
+            removingRef.current
+        ) {
             return
         }
 
@@ -77,10 +108,7 @@ export function SwipeToReveal({
     function move(event: PointerEvent<HTMLDivElement>) {
         const gesture = gestureRef.current
 
-        if (
-            !gesture ||
-            gesture.pointerId !== event.pointerId
-        ) {
+        if (!gesture || gesture.pointerId !== event.pointerId) {
             return
         }
 
@@ -105,9 +133,7 @@ export function SwipeToReveal({
             gesture.axis = 'horizontal'
             setSwiping(true)
 
-            event.currentTarget.setPointerCapture(
-                event.pointerId,
-            )
+            event.currentTarget.setPointerCapture(event.pointerId)
         }
 
         if (gesture.axis !== 'horizontal') {
@@ -129,10 +155,7 @@ export function SwipeToReveal({
     function finish(event: PointerEvent<HTMLDivElement>) {
         const gesture = gestureRef.current
 
-        if (
-            !gesture ||
-            gesture.pointerId !== event.pointerId
-        ) {
+        if (!gesture || gesture.pointerId !== event.pointerId) {
             return
         }
 
@@ -148,23 +171,16 @@ export function SwipeToReveal({
         }
 
         if (
-            event.currentTarget.hasPointerCapture(
-                event.pointerId,
-            )
+            event.currentTarget.hasPointerCapture(event.pointerId)
         ) {
-            event.currentTarget.releasePointerCapture(
-                event.pointerId,
-            )
+            event.currentTarget.releasePointerCapture(event.pointerId)
         }
     }
 
     function cancel(event: PointerEvent<HTMLDivElement>) {
         const gesture = gestureRef.current
 
-        if (
-            !gesture ||
-            gesture.pointerId !== event.pointerId
-        ) {
+        if (!gesture || gesture.pointerId !== event.pointerId) {
             return
         }
 
@@ -214,29 +230,21 @@ export function SwipeToReveal({
                     <button
                         type="button"
                         tabIndex={open ? 0 : -1}
-                        aria-label={
-                            label + ' aus Liste entfernen'
-                        }
+                        aria-label={label + ' aus Liste entfernen'}
+                        disabled={isRemoving}
                         onClick={() => {
-                            if (!onRemove()) {
-                                setError(
-                                    'Der Eintrag konnte nicht entfernt werden.',
-                                )
-                            }
+                            void remove()
                         }}
                     >
-                        Entfernen
+                        {isRemoving ? 'Bitte warten …' : 'Entfernen'}
                     </button>
                 </div>
 
                 <div
                     className="swipe-row__surface"
                     style={{
-                        transform:
-                            'translateX(' + offset + 'px)',
-                        transition: swiping
-                            ? 'none'
-                            : undefined,
+                        transform: `translateX(${offset}px)`,
+                        transition: swiping ? 'none' : undefined,
                     }}
                     onPointerDown={start}
                     onPointerMove={move}
@@ -249,9 +257,7 @@ export function SwipeToReveal({
 
                         if (
                             target instanceof Element &&
-                            target.closest(
-                                '[data-drag-handle]',
-                            )
+                            target.closest('[data-drag-handle]')
                         ) {
                             return
                         }
@@ -275,10 +281,9 @@ export function SwipeToReveal({
                         aria-label={'Aktionen für ' + label}
                         aria-expanded={open}
                         aria-controls={actionsId}
+                        disabled={isRemoving}
                         onClick={() =>
-                            updateOffset(
-                                open ? 0 : -ACTION_WIDTH,
-                            )
+                            updateOffset(open ? 0 : -ACTION_WIDTH)
                         }
                     >
                         <span aria-hidden="true">⋯</span>

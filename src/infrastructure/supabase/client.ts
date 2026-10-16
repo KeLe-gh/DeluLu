@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js'
+import type { SupabaseClient } from '@supabase/supabase-js'
 import type { Database } from './database.types'
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
@@ -18,7 +19,42 @@ if (!supabasePublishableKey.startsWith('sb_publishable_')) {
     )
 }
 
-export const supabase = createClient<Database>(
-    supabaseUrl,
-    supabasePublishableKey,
-)
+interface CachedSupabaseClient {
+    url: string
+    publishableKey: string
+    client: SupabaseClient<Database>
+}
+
+const developmentRuntime = globalThis as typeof globalThis & {
+    __deluluSupabaseClient?: CachedSupabaseClient
+}
+
+function getSupabaseClient(): SupabaseClient<Database> {
+    const cached = developmentRuntime.__deluluSupabaseClient
+
+    if (
+        import.meta.env.DEV &&
+        cached &&
+        cached.url === supabaseUrl &&
+        cached.publishableKey === supabasePublishableKey
+    ) {
+        return cached.client
+    }
+
+    const client = createClient<Database>(
+        supabaseUrl,
+        supabasePublishableKey,
+    )
+
+    if (import.meta.env.DEV) {
+        developmentRuntime.__deluluSupabaseClient = {
+            url: supabaseUrl,
+            publishableKey: supabasePublishableKey,
+            client,
+        }
+    }
+
+    return client
+}
+
+export const supabase = getSupabaseClient()

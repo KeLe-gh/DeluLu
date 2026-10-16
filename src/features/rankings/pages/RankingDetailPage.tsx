@@ -14,17 +14,17 @@ interface RankingDetailPageProps {
     onAddEntry: (
         name: string,
         position: number,
-    ) => boolean
+    ) => Promise<boolean>
     onUpdateEntry: (
         entryId: EntryId,
         name: string,
         position: number,
-    ) => boolean
-    onRemoveEntry: (entryId: EntryId) => boolean
+    ) => Promise<boolean>
+    onRemoveEntry: (entryId: EntryId) => Promise<boolean>
     onReorderEntry: (
         entryId: EntryId,
         toIndex: number,
-    ) => boolean
+    ) => Promise<boolean>
     onBack: () => void
 }
 
@@ -40,6 +40,7 @@ export function RankingDetailPage({
     const [name, setName] = useState('')
     const [positionInput, setPositionInput] = useState('')
     const [error, setError] = useState('')
+    const [isAdding, setIsAdding] = useState(false)
     const [editingEntryId, setEditingEntryId] =
         useState<EntryId | null>(null)
 
@@ -50,37 +51,47 @@ export function RankingDetailPage({
         (entry) => entry.id === editingEntryId,
     )
 
-    function addEntry() {
-        const position =
-            positionInput.trim() === ''
-                ? nextPosition
-                : Number(positionInput)
+    async function addEntry() {
+        if (isAdding) {
+            return
+        }
+
+        const position = positionInput.trim() === ''
+            ? nextPosition
+            : Number(positionInput)
 
         if (name.trim() === '') {
             setError('Bitte gib einen Namen ein.')
             return
         }
 
-        if (
-            !Number.isSafeInteger(position) ||
-            position < 1
-        ) {
-            setError(
-                'Bitte gib eine gültige Position ab 1 ein.',
-            )
+        if (!Number.isSafeInteger(position) || position < 1) {
+            setError('Bitte gib eine gültige Position ab 1 ein.')
             return
         }
 
-        if (!onAddEntry(name, position)) {
+        setIsAdding(true)
+        setError('')
+
+        try {
+            const added = await onAddEntry(name, position)
+
+            if (!added) {
+                setError(
+                    'Der Eintrag konnte nicht hinzugefügt werden.',
+                )
+                return
+            }
+
+            setName('')
+            setPositionInput('')
+        } catch {
             setError(
                 'Der Eintrag konnte nicht hinzugefügt werden.',
             )
-            return
+        } finally {
+            setIsAdding(false)
         }
-
-        setName('')
-        setPositionInput('')
-        setError('')
     }
 
     return (
@@ -100,8 +111,8 @@ export function RankingDetailPage({
                     key={editingEntry.id}
                     name={getItemName(editingEntry.itemId)}
                     position={editingEntry.position}
-                    onSave={(newName, newPosition) => {
-                        const saved = onUpdateEntry(
+                    onSave={async (newName, newPosition) => {
+                        const saved = await onUpdateEntry(
                             editingEntry.id,
                             newName,
                             newPosition,
@@ -113,8 +124,8 @@ export function RankingDetailPage({
 
                         return saved
                     }}
-                    onRemove={() => {
-                        const removed = onRemoveEntry(
+                    onRemove={async () => {
+                        const removed = await onRemoveEntry(
                             editingEntry.id,
                         )
 
@@ -130,15 +141,13 @@ export function RankingDetailPage({
                 <form
                     onSubmit={(event) => {
                         event.preventDefault()
-                        addEntry()
+                        void addEntry()
                     }}
                 >
                     <h2>Eintrag hinzufügen</h2>
 
                     <div>
-                        <label htmlFor="entry-name">
-                            Name
-                        </label>
+                        <label htmlFor="entry-name">Name</label>
 
                         <input
                             id="entry-name"
@@ -148,6 +157,7 @@ export function RankingDetailPage({
                                 setName(event.target.value)
                             }
                             placeholder="Zum Beispiel Nanami"
+                            disabled={isAdding}
                             required
                         />
                     </div>
@@ -164,14 +174,11 @@ export function RankingDetailPage({
                             step="1"
                             value={positionInput}
                             onChange={(event) =>
-                                setPositionInput(
-                                    event.target.value,
-                                )
+                                setPositionInput(event.target.value)
                             }
-                            placeholder={
-                                String(nextPosition)
-                            }
+                            placeholder={String(nextPosition)}
                             aria-describedby="entry-position-help"
+                            disabled={isAdding}
                         />
 
                         <p id="entry-position-help">
@@ -180,22 +187,20 @@ export function RankingDetailPage({
                         </p>
                     </div>
 
-                    <button type="submit">
-                        Eintrag hinzufügen
+                    <button type="submit" disabled={isAdding}>
+                        {isAdding
+                            ? 'Eintrag wird gespeichert …'
+                            : 'Eintrag hinzufügen'}
                     </button>
 
-                    {error && (
-                        <p role="alert">{error}</p>
-                    )}
+                    {error && <p role="alert">{error}</p>}
                 </form>
             )}
 
             <h2>Einträge</h2>
 
             {list.entries.length === 0 ? (
-                <p>
-                    Diese Rangliste hat noch keine Einträge.
-                </p>
+                <p>Diese Rangliste hat noch keine Einträge.</p>
             ) : (
                 <SortableRankingEntries
                     entries={list.entries}

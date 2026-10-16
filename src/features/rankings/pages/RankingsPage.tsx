@@ -11,32 +11,31 @@ import { RankingDetailPage } from './RankingDetailPage'
 interface RankingsPageProps {
     lists: readonly RankingList[]
     getItemName: (itemId: ItemId) => string
-    onCreateList: (title: string) => boolean
+    onCreateList: (title: string) => Promise<boolean>
     onAddEntry: (
         listId: ListId,
         name: string,
         position: number,
-    ) => boolean
+    ) => Promise<boolean>
     onUpdateEntry: (
         listId: ListId,
         entryId: EntryId,
         name: string,
         position: number,
-    ) => boolean
+    ) => Promise<boolean>
     onRemoveEntry: (
         listId: ListId,
         entryId: EntryId,
-    ) => boolean
+    ) => Promise<boolean>
     onReorderEntry: (
         listId: ListId,
         entryId: EntryId,
         toIndex: number,
-    ) => boolean
+    ) => Promise<boolean>
 }
 
 function getListLabel(list: RankingList): string {
     const size = getRankingSize(list)
-
     return size === 0 ? 'Leere Rangliste' : `Top ${size}`
 }
 
@@ -51,6 +50,7 @@ export function RankingsPage({
                              }: RankingsPageProps) {
     const [listName, setListName] = useState('')
     const [error, setError] = useState('')
+    const [isCreating, setIsCreating] = useState(false)
     const [selectedListId, setSelectedListId] =
         useState<ListId | null>(null)
 
@@ -58,18 +58,35 @@ export function RankingsPage({
         (list) => list.id === selectedListId,
     )
 
-    function createList() {
-        const created = onCreateList(listName)
-
-        if (!created) {
-            setError(
-                'Bitte gib einen Namen für deine Liste ein.',
-            )
+    async function createList() {
+        if (isCreating) {
             return
         }
 
-        setListName('')
+        const title = listName.trim()
+
+        if (title === '') {
+            setError('Bitte gib einen Namen für deine Liste ein.')
+            return
+        }
+
+        setIsCreating(true)
         setError('')
+
+        try {
+            const created = await onCreateList(title)
+
+            if (!created) {
+                setError('Die Liste konnte nicht erstellt werden.')
+                return
+            }
+
+            setListName('')
+        } catch {
+            setError('Die Liste konnte nicht erstellt werden.')
+        } finally {
+            setIsCreating(false)
+        }
     }
 
     if (selectedList) {
@@ -79,11 +96,7 @@ export function RankingsPage({
                 list={selectedList}
                 getItemName={getItemName}
                 onAddEntry={(name, position) =>
-                    onAddEntry(
-                        selectedList.id,
-                        name,
-                        position,
-                    )
+                    onAddEntry(selectedList.id, name, position)
                 }
                 onUpdateEntry={(entryId, name, position) =>
                     onUpdateEntry(
@@ -94,10 +107,7 @@ export function RankingsPage({
                     )
                 }
                 onRemoveEntry={(entryId) =>
-                    onRemoveEntry(
-                        selectedList.id,
-                        entryId,
-                    )
+                    onRemoveEntry(selectedList.id, entryId)
                 }
                 onReorderEntry={(entryId, toIndex) =>
                     onReorderEntry(
@@ -118,13 +128,11 @@ export function RankingsPage({
             <form
                 onSubmit={(event) => {
                     event.preventDefault()
-                    createList()
+                    void createList()
                 }}
             >
                 <div>
-                    <label htmlFor="list-name">
-                        Listenname
-                    </label>
+                    <label htmlFor="list-name">Listenname</label>
 
                     <input
                         id="list-name"
@@ -134,30 +142,34 @@ export function RankingsPage({
                         onChange={(event) =>
                             setListName(event.target.value)
                         }
+                        disabled={isCreating}
                         required
                     />
                 </div>
 
-                <button type="submit">
-                    Liste erstellen
+                <button type="submit" disabled={isCreating}>
+                    {isCreating
+                        ? 'Liste wird erstellt …'
+                        : 'Liste erstellen'}
                 </button>
 
                 {error && <p role="alert">{error}</p>}
             </form>
+
+            {lists.length === 0 && (
+                <p>Du hast noch keine Top-Listen erstellt.</p>
+            )}
 
             {lists.map((list) => (
                 <article key={list.id}>
                     <button
                         type="button"
                         className="ranking-card"
-                        onClick={() =>
-                            setSelectedListId(list.id)
-                        }
+                        onClick={() => setSelectedListId(list.id)}
                     >
                         <span className="ranking-card__title">
                             {list.title}
                         </span>
-
                         <span>{getListLabel(list)}</span>
                     </button>
                 </article>

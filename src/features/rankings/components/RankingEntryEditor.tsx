@@ -1,11 +1,13 @@
-import { useState } from 'react'
-import type { FormEvent } from 'react'
+import { useRef, useState } from 'react'
 
 interface RankingEntryEditorProps {
     name: string
     position: number
-    onSave: (name: string, position: number) => boolean
-    onRemove: () => boolean
+    onSave: (
+        name: string,
+        position: number,
+    ) => Promise<boolean>
+    onRemove: () => Promise<boolean>
     onCancel: () => void
 }
 
@@ -17,52 +19,66 @@ export function RankingEntryEditor({
                                        onCancel,
                                    }: RankingEntryEditorProps) {
     const [editedName, setEditedName] = useState(name)
+    const [editedPosition, setEditedPosition] =
+        useState(String(position))
     const [error, setError] = useState('')
+    const [pending, setPending] = useState(false)
+    const pendingRef = useRef(false)
 
-    function save(event: FormEvent<HTMLFormElement>) {
-        event.preventDefault()
+    async function perform(
+        action: () => Promise<boolean>,
+        failureMessage: string,
+    ) {
+        if (pendingRef.current) {
+            return
+        }
 
-        const formData = new FormData(event.currentTarget)
-        const newPosition = Number(formData.get('position'))
+        pendingRef.current = true
+        setPending(true)
+        setError('')
+
+        try {
+            if (!await action()) {
+                setError(failureMessage)
+            }
+        } catch {
+            setError(failureMessage)
+        } finally {
+            pendingRef.current = false
+            setPending(false)
+        }
+    }
+
+    async function save() {
+        const newPosition = Number(editedPosition)
 
         if (editedName.trim() === '') {
             setError('Bitte gib einen Namen ein.')
             return
         }
 
-        if (
-            !Number.isSafeInteger(newPosition) ||
-            newPosition < 1
-        ) {
-            setError(
-                'Bitte gib eine gültige Position ab 1 ein.',
-            )
+        if (!Number.isSafeInteger(newPosition) || newPosition < 1) {
+            setError('Bitte gib eine gültige Position ab 1 ein.')
             return
         }
 
-        if (!onSave(editedName, newPosition)) {
-            setError(
-                'Die Änderungen konnten nicht gespeichert werden.',
-            )
-        }
-    }
-
-    function remove() {
-        if (!onRemove()) {
-            setError(
-                'Der Eintrag konnte nicht entfernt werden.',
-            )
-        }
+        await perform(
+            () => onSave(editedName, newPosition),
+            'Die Änderungen konnten nicht gespeichert werden.',
+        )
     }
 
     return (
-        <form onSubmit={save}>
+        <form
+            onSubmit={(event) => {
+                event.preventDefault()
+                void save()
+            }}
+        >
             <h2>Eintrag bearbeiten</h2>
 
             <div>
-                <label htmlFor="edit-entry-name">
-                    Name
-                </label>
+                <label htmlFor="edit-entry-name">Name</label>
 
                 <input
                     id="edit-entry-name"
@@ -71,6 +87,7 @@ export function RankingEntryEditor({
                     onChange={(event) =>
                         setEditedName(event.target.value)
                     }
+                    disabled={pending}
                     required
                 />
             </div>
@@ -86,28 +103,47 @@ export function RankingEntryEditor({
                 </label>
 
                 <input
-                    key={position}
                     id="edit-entry-position"
-                    name="position"
                     type="number"
                     min="1"
                     step="1"
-                    defaultValue={position}
+                    value={editedPosition}
+                    onChange={(event) =>
+                        setEditedPosition(event.target.value)
+                    }
+                    disabled={pending}
                     required
                 />
             </div>
 
+            <p>
+                Gespeicherter Stand: {name}, Position {position}.
+            </p>
+
             {error && <p role="alert">{error}</p>}
 
-            <button type="submit">
-                Änderungen speichern
+            <button type="submit" disabled={pending}>
+                {pending ? 'Bitte warten …' : 'Änderungen speichern'}
             </button>
 
-            <button type="button" onClick={onCancel}>
+            <button
+                type="button"
+                onClick={onCancel}
+                disabled={pending}
+            >
                 Abbrechen
             </button>
 
-            <button type="button" onClick={remove}>
+            <button
+                type="button"
+                onClick={() => {
+                    void perform(
+                        onRemove,
+                        'Der Eintrag konnte nicht entfernt werden.',
+                    )
+                }}
+                disabled={pending}
+            >
                 Aus Liste entfernen
             </button>
         </form>

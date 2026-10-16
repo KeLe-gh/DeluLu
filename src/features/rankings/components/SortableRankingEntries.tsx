@@ -60,11 +60,11 @@ interface SortableRankingEntriesProps {
     entries: readonly RankingListEntry[]
     getItemName: (itemId: ItemId) => string
     onEdit: (entryId: EntryId) => void
-    onRemove: (entryId: EntryId) => boolean
+    onRemove: (entryId: EntryId) => Promise<boolean>
     onReorder: (
         entryId: EntryId,
         toIndex: number,
-    ) => boolean
+    ) => Promise<boolean>
 }
 
 interface SortableEntryProps {
@@ -72,7 +72,7 @@ interface SortableEntryProps {
     name: string
     index: number
     onEdit: () => void
-    onRemove: () => boolean
+    onRemove: () => Promise<boolean>
 }
 
 function SortableEntry({
@@ -82,11 +82,7 @@ function SortableEntry({
                            onEdit,
                            onRemove,
                        }: SortableEntryProps) {
-    const {
-        ref,
-        handleRef,
-        isDragging,
-    } = useSortable({
+    const { ref, handleRef, isDragging } = useSortable({
         id: entry.id,
         index,
         data: { name },
@@ -98,15 +94,10 @@ function SortableEntry({
             value={entry.position}
             className={
                 'ranking-entry' +
-                (isDragging
-                    ? ' ranking-entry--dragging'
-                    : '')
+                (isDragging ? ' ranking-entry--dragging' : '')
             }
         >
-            <SwipeToReveal
-                label={name}
-                onRemove={onRemove}
-            >
+            <SwipeToReveal label={name} onRemove={onRemove}>
                 <button
                     ref={handleRef}
                     type="button"
@@ -157,7 +148,7 @@ export function SortableRankingEntries({
     const suppressEditUntil = useRef(0)
 
     const orderedEntries = [...entries].sort(
-        (a, b) => a.position - b.position,
+        (first, second) => first.position - second.position,
     )
 
     return (
@@ -196,9 +187,7 @@ export function SortableRankingEntries({
                                     orderedEntries[source.index]
 
                                 return slot
-                                    ? 'Zielposition ' +
-                                    slot.position +
-                                    '.'
+                                    ? `Zielposition ${slot.position}.`
                                     : undefined
                             },
 
@@ -214,12 +203,10 @@ export function SortableRankingEntries({
                 onDragStart={() => {
                     suppressEditUntil.current =
                         Number.POSITIVE_INFINITY
-
                     setError('')
                 }}
-                onDragEnd={(event) => {
-                    suppressEditUntil.current =
-                        Date.now() + 200
+                onDragEnd={async (event) => {
+                    suppressEditUntil.current = Date.now() + 200
 
                     if (event.canceled) {
                         return
@@ -234,12 +221,18 @@ export function SortableRankingEntries({
                         return
                     }
 
-                    const reordered = onReorder(
-                        String(source.id),
-                        source.index,
-                    )
+                    try {
+                        const reordered = await onReorder(
+                            String(source.id),
+                            source.index,
+                        )
 
-                    if (!reordered) {
+                        if (!reordered) {
+                            setError(
+                                'Die Reihenfolge konnte nicht geändert werden.',
+                            )
+                        }
+                    } catch {
                         setError(
                             'Die Reihenfolge konnte nicht geändert werden.',
                         )
@@ -261,9 +254,7 @@ export function SortableRankingEntries({
                                     onEdit(entry.id)
                                 }
                             }}
-                            onRemove={() =>
-                                onRemove(entry.id)
-                            }
+                            onRemove={() => onRemove(entry.id)}
                         />
                     ))}
                 </ol>
