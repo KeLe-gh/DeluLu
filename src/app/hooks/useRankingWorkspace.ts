@@ -135,12 +135,8 @@ export function useRankingWorkspace({
 
                 try {
                     await imageStore.cleanupUnused()
-                } catch {
-                    if (generation === generationRef.current) {
-                        setError(
-                            'Alte Fotos konnten noch nicht gelöscht werden. Beim nächsten Laden wird es erneut versucht.',
-                        )
-                    }
+                } catch (cleanupError) {
+                    console.warn('[deluLu] Photo cleanup failed:', cleanupError)
                 }
             } catch {
                 if (generation !== generationRef.current) {
@@ -217,12 +213,8 @@ export function useRankingWorkspace({
 
             try {
                 await imageStore.cleanupUnused()
-            } catch {
-                if (generation === generationRef.current) {
-                    setError(
-                        'Gespeichert. Alte Fotos konnten noch nicht gelöscht werden. Beim nächsten Laden wird es erneut versucht.',
-                    )
-                }
+            } catch (cleanupError) {
+                console.warn('[deluLu] Photo cleanup failed:', cleanupError)
             }
 
             return true
