@@ -4,28 +4,25 @@ interface HomePageProps {
 
 export function HomePage({ onOpenLists }: HomePageProps) {
     return (
-        <main>
-            <h1>deluLu 💜</h1>
-            <p>Deine Listen. Deine Rankings. Deine Welt.</p>
+        <main className="page">
+            <div className="page-heading"><h1>Dein Bereich</h1></div>
 
-            <nav aria-label="Bereiche">
-                <div>
-                    <button type="button" onClick={onOpenLists}>
-                        Listen
-                    </button>
-                </div>
-
-                <div>
-                    <button type="button" disabled>
-                        Serien – demnächst
-                    </button>
-                </div>
-
-                <div>
-                    <button type="button" disabled>
-                        Einstellungen – demnächst
-                    </button>
-                </div>
+            <nav className="feature-grid" aria-label="Bereiche">
+                <button type="button" className="feature-card" onClick={onOpenLists}>
+                    <span className="feature-card__icon" aria-hidden="true">☷</span>
+                    <span>Listen</span>
+                    <span className="feature-card__arrow" aria-hidden="true">›</span>
+                </button>
+                <button type="button" className="feature-card" disabled>
+                    <span className="feature-card__icon" aria-hidden="true">▻</span>
+                    <span>Serien</span>
+                    <span className="badge">Bald</span>
+                </button>
+                <button type="button" className="feature-card" disabled>
+                    <span className="feature-card__icon" aria-hidden="true">⚙</span>
+                    <span>Einstellungen</span>
+                    <span className="badge">Bald</span>
+                </button>
             </nav>
         </main>
     )

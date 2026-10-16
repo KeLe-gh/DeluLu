@@ -152,7 +152,7 @@ export function SortableRankingLists({
 
     return (
         <>
-            <p>
+            <p className="sr-only">
                 Tippen zum Öffnen. Zum Sortieren den
                 ⠿-Griff ziehen. Nach links über den Namen
                 wischen für Umbenennen und Löschen.

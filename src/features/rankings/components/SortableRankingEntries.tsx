@@ -151,7 +151,7 @@ export function SortableRankingEntries({
 
     return (
         <>
-            <p>
+            <p className="sr-only">
                 Tippen zum Bearbeiten. Zum Sortieren den
                 ⠿-Griff ziehen. Nach links über den Namen
                 wischen für weitere Aktionen.

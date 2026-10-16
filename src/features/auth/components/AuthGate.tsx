@@ -56,7 +56,13 @@ export function AuthGate({
 
     return (
         <>
-            <header>
+
+
+            <div key={user.id}>{children}</div>
+
+            <footer className="account-footer">
+                <details>
+                    <summary>Konto</summary>
                 <p>
                     {user.email
                         ? `Angemeldet als ${user.email}`
@@ -74,9 +80,8 @@ export function AuthGate({
                 </button>
 
                 {error && <p role="alert">{error}</p>}
-            </header>
-
-            <div key={user.id}>{children}</div>
+                </details>
+            </footer>
         </>
     )
 }
