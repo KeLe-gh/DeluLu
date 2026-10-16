@@ -4,6 +4,7 @@ import type { PhotoChange } from '../model/profileImageStore'
 import { prepareProfilePhoto } from '../model/prepareProfilePhoto'
 import { ProfilePhoto } from './ProfilePhoto'
 import { BackgroundPhoto } from './BackgroundPhoto'
+import { BackgroundCropper } from './BackgroundCropper'
 
 export function PhotoPicker({
                                 imageId,
@@ -25,6 +26,7 @@ export function PhotoPicker({
     const inputRef = useRef<HTMLInputElement>(null)
     const [busy, setBusy] = useState(false)
     const [error, setError] = useState('')
+    const [cropFile, setCropFile] = useState<File | null>(null)
 
     const hasPhoto =
         value instanceof Blob ||
@@ -36,30 +38,62 @@ export function PhotoPicker({
 
     async function select(file: File) {
         const current = ++request.current
+
         setBusy(true)
         onBusyChange(true)
         setError('')
 
-        try {
-            const photo = await prepareProfilePhoto(file)
+        let cropping = false
 
-            if (current === request.current) {
-                onChange(photo)
+        try {
+            if (kind === 'background') {
+                if (
+                    file.size === 0 ||
+                    file.size > 30 * 1024 * 1024
+                ) {
+                    throw new Error(
+                        'Bitte wähle ein Foto mit höchstens 30 MB.',
+                    )
+                }
+
+                if (
+                    file.type &&
+                    !file.type.startsWith('image/')
+                ) {
+                    throw new Error('Bitte wähle ein Foto.')
+                }
+
+                setCropFile(file)
+                cropping = true
+            } else {
+                const photo = await prepareProfilePhoto(file)
+
+                if (current === request.current) {
+                    onChange(photo)
+                }
             }
-        } catch (error) {
+        } catch (cause) {
             if (current === request.current) {
                 setError(
-                    error instanceof Error
-                        ? error.message
+                    cause instanceof Error
+                        ? cause.message
                         : 'Das Foto konnte nicht geöffnet werden.',
                 )
             }
         } finally {
-            if (current === request.current) {
+            if (current === request.current && !cropping) {
                 setBusy(false)
                 onBusyChange(false)
             }
         }
+    }
+
+    function finishCrop(photo?: Blob) {
+        if (photo) onChange(photo)
+
+        setCropFile(null)
+        setBusy(false)
+        onBusyChange(false)
     }
 
     return (
@@ -144,6 +178,14 @@ export function PhotoPicker({
             </div>
 
             {error && <p role="alert">{error}</p>}
+
+            {cropFile && (
+                <BackgroundCropper
+                    file={cropFile}
+                    onConfirm={(photo) => finishCrop(photo)}
+                    onCancel={() => finishCrop()}
+                />
+            )}
         </div>
     )
 }

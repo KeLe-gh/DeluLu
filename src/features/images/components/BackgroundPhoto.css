@@ -15,8 +15,9 @@
 }
 
 .photo-picker--background .background-photo {
-    flex: 0 0 140px;
-    width: 140px;
-    height: 80px;
+    flex: 0 0 100%;
+    width: 100%;
+    height: auto;
+    aspect-ratio: 4 / 1;
     border-radius: 12px;
 }
