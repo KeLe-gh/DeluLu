@@ -83,3 +83,32 @@
 .ranking-entry__drag .ranking-entry__grip {
     pointer-events: none;
 }
+.ranking-entry--background .swipe-row__surface {
+    background: #342d40;
+    color: white;
+}
+
+.ranking-entry__background {
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+    pointer-events: none;
+}
+
+.ranking-entry__background::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(90deg, #000b, #000a);
+}
+
+.ranking-entry--background .ranking-entry__edit,
+.ranking-entry--background .ranking-entry__drag,
+.ranking-entry--background .swipe-row__toggle {
+    position: relative;
+    z-index: 1;
+}
+
+.ranking-entry--background .ranking-entry__grip {
+    opacity: 0.9;
+}

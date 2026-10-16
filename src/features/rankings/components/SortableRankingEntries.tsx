@@ -21,6 +21,7 @@ import type {
 } from '../../../shared/types/list.types'
 import { SwipeToReveal } from '../../../shared/components/SwipeToReveal'
 import { ProfilePhoto } from '../../images/components/ProfilePhoto'
+import { BackgroundPhoto } from '../../images/components/BackgroundPhoto'
 import './RankingEntries.css'
 
 const rankingSensors = [
@@ -49,6 +50,7 @@ interface SortableRankingEntriesProps {
     entries: readonly RankingListEntry[]
     getItemName: (itemId: ItemId) => string
     getItemImageId: (itemId: ItemId) => string | null
+    getItemBackgroundImageId: (itemId: ItemId) => string | null
     onEdit: (entryId: EntryId) => void
     onRemove: (entryId: EntryId) => Promise<boolean>
     onReorder: (
@@ -61,6 +63,7 @@ interface SortableEntryProps {
     entry: RankingListEntry
     name: string
     imageId: string | null
+    backgroundImageId: string | null
     index: number
     onEdit: () => void
     onRemove: () => Promise<boolean>
@@ -70,6 +73,7 @@ function SortableEntry({
                            entry,
                            name,
                            imageId,
+                           backgroundImageId,
                            index,
                            onEdit,
                            onRemove,
@@ -86,10 +90,33 @@ function SortableEntry({
             value={entry.position}
             className={
                 'ranking-entry' +
-                (isDragging ? ' ranking-entry--dragging' : '')
+                (
+                    backgroundImageId
+                        ? ' ranking-entry--background'
+                        : ''
+                ) +
+                (
+                    isDragging
+                        ? ' ranking-entry--dragging'
+                        : ''
+                )
             }
         >
-            <SwipeToReveal label={name} onRemove={onRemove}>
+            <SwipeToReveal
+                label={name}
+                onRemove={onRemove}
+            >
+                {backgroundImageId && (
+                    <span
+                        className="ranking-entry__background"
+                        aria-hidden="true"
+                    >
+                        <BackgroundPhoto
+                            imageId={backgroundImageId}
+                        />
+                    </span>
+                )}
+
                 <button
                     type="button"
                     className="ranking-entry__edit"
@@ -111,7 +138,12 @@ function SortableEntry({
                         {entry.position}.
                     </span>
 
-                    {imageId && <ProfilePhoto imageId={imageId} name={name} />}
+                    {imageId && (
+                        <ProfilePhoto
+                            imageId={imageId}
+                            name={name}
+                        />
+                    )}
 
                     <span className="ranking-entry__name">
                         {name}
@@ -145,6 +177,7 @@ export function SortableRankingEntries({
                                            entries,
                                            getItemName,
                                            getItemImageId,
+                                           getItemBackgroundImageId,
                                            onEdit,
                                            onRemove,
                                            onReorder,
@@ -178,7 +211,8 @@ export function SortableRankingEntries({
                                 'Escape zum Abbrechen.',
                         },
                         announcements: {
-                            dragstart: () => 'Eintrag aufgenommen.',
+                            dragstart: () =>
+                                'Eintrag aufgenommen.',
 
                             dragover: ({
                                            operation: { source },
@@ -207,10 +241,12 @@ export function SortableRankingEntries({
                 onDragStart={() => {
                     suppressEditUntil.current =
                         Number.POSITIVE_INFINITY
+
                     setError('')
                 }}
                 onDragEnd={async (event) => {
-                    suppressEditUntil.current = Date.now() + 200
+                    suppressEditUntil.current =
+                        Date.now() + 200
 
                     if (event.canceled) {
                         return
@@ -250,7 +286,14 @@ export function SortableRankingEntries({
                             entry={entry}
                             index={index}
                             name={getItemName(entry.itemId)}
-                            imageId={getItemImageId(entry.itemId)}
+                            imageId={
+                                getItemImageId(entry.itemId)
+                            }
+                            backgroundImageId={
+                                getItemBackgroundImageId(
+                                    entry.itemId,
+                                )
+                            }
                             onEdit={() => {
                                 if (
                                     Date.now() >=
@@ -259,7 +302,9 @@ export function SortableRankingEntries({
                                     onEdit(entry.id)
                                 }
                             }}
-                            onRemove={() => onRemove(entry.id)}
+                            onRemove={() =>
+                                onRemove(entry.id)
+                            }
                         />
                     ))}
                 </ol>

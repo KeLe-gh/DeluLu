@@ -15,6 +15,7 @@ interface RankingDetailPageProps {
         id: ItemId
         name: string
         profileImageId: string | null
+        backgroundImageId: string | null
     }[]
     createOpen: boolean
     onCloseCreate: () => void
@@ -34,6 +35,7 @@ interface RankingDetailPageProps {
         name: string,
         position: number,
         photo?: Blob | null,
+        background?: Blob | null,
     ) => Promise<boolean>
     onRemoveEntry: (entryId: EntryId) => Promise<boolean>
     onReorderEntry: (
@@ -62,12 +64,18 @@ export function RankingDetailPage({
         (entry) => entry.id === editingEntryId,
     )
 
+    const getItemBackgroundImageId = (itemId: ItemId) =>
+        catalogItems.find(
+            (item) => item.id === itemId,
+        )?.backgroundImageId ?? null
+
     const size = getRankingSize(list)
 
     return (
         <main className="page">
             <div className="page-heading">
                 <h1>{list.title}</h1>
+
                 <span className="count">
                     {size === 0 ? 'Leer' : 'Top ' + size}
                 </span>
@@ -88,13 +96,26 @@ export function RankingDetailPage({
                     key={editingEntry.id}
                     name={getItemName(editingEntry.itemId)}
                     position={editingEntry.position}
-                    imageId={getItemImageId(editingEntry.itemId)}
-                    onSave={async (name, position, photo) => {
+                    imageId={
+                        getItemImageId(editingEntry.itemId)
+                    }
+                    backgroundImageId={
+                        getItemBackgroundImageId(
+                            editingEntry.itemId,
+                        )
+                    }
+                    onSave={async (
+                        name,
+                        position,
+                        photo,
+                        background,
+                    ) => {
                         const saved = await onUpdateEntry(
                             editingEntry.id,
                             name,
                             position,
                             photo,
+                            background,
                         )
 
                         if (saved) {
@@ -128,6 +149,9 @@ export function RankingDetailPage({
                     entries={list.entries}
                     getItemName={getItemName}
                     getItemImageId={getItemImageId}
+                    getItemBackgroundImageId={
+                        getItemBackgroundImageId
+                    }
                     onEdit={setEditingEntryId}
                     onRemove={onRemoveEntry}
                     onReorder={onReorderEntry}

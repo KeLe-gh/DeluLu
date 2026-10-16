@@ -1,0 +1,20 @@
+.background-photo {
+    display: block;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    background: var(--accent-bg);
+}
+
+.background-photo img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.photo-picker--background .background-photo {
+    flex: 0 0 140px;
+    width: 140px;
+    height: 80px;
+    border-radius: 12px;
+}

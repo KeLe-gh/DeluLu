@@ -136,7 +136,10 @@ export function useRankingWorkspace({
                 try {
                     await imageStore.cleanupUnused()
                 } catch (cleanupError) {
-                    console.warn('[deluLu] Photo cleanup failed:', cleanupError)
+                    console.warn(
+                        '[deluLu] Photo cleanup failed:',
+                        cleanupError,
+                    )
                 }
             } catch {
                 if (generation !== generationRef.current) {
@@ -214,7 +217,10 @@ export function useRankingWorkspace({
             try {
                 await imageStore.cleanupUnused()
             } catch (cleanupError) {
-                console.warn('[deluLu] Photo cleanup failed:', cleanupError)
+                console.warn(
+                    '[deluLu] Photo cleanup failed:',
+                    cleanupError,
+                )
             }
 
             return true
@@ -246,6 +252,7 @@ export function useRankingWorkspace({
             current: WorkspaceRecords,
         ) => SaveRankingInput | null,
         photo?: Blob | null,
+        background?: Blob | null,
     ): Promise<boolean> {
         return mutate(async (current) => {
             const input = buildInput(current)
@@ -261,6 +268,19 @@ export function useRankingWorkspace({
                         photo === null
                             ? null
                             : await imageStore.upload(photo),
+                }
+            }
+
+            if (
+                background !== undefined &&
+                input.catalogChange
+            ) {
+                input.catalogChange.item = {
+                    ...input.catalogChange.item,
+                    backgroundImageId:
+                        background === null
+                            ? null
+                            : await imageStore.upload(background),
                 }
             }
 
@@ -485,6 +505,7 @@ export function useRankingWorkspace({
         name: string,
         position: number,
         photo?: Blob | null,
+        background?: Blob | null,
     ): Promise<boolean> {
         return save((current) => {
             const storedList = current.lists.find(
@@ -527,7 +548,8 @@ export function useRankingWorkspace({
 
             if (
                 item.name !== storedItem.value.name ||
-                photo !== undefined
+                photo !== undefined ||
+                background !== undefined
             ) {
                 input.catalogChange = {
                     item,
@@ -536,7 +558,7 @@ export function useRankingWorkspace({
             }
 
             return input
-        }, photo)
+        }, photo, background)
     }
 
     function removeEntry(
