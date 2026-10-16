@@ -7,9 +7,7 @@ import type {
     CatalogItem,
     CatalogRepository,
 } from '../../features/catalog'
-import type {
-    RankingRepository,
-} from '../../features/rankings'
+import type { RankingRepository } from '../../features/rankings'
 import {
     addRankingEntry,
     createRankingList,
@@ -17,17 +15,15 @@ import {
     removeRankingEntry,
     reorderRankingEntries,
 } from '../../features/rankings/model/ranking.operations'
-import { RevisionConflictError } from '../../shared/errors/persistence.errors'
 import type { ProfileImageStore } from '../../features/images/model/profileImageStore'
+import { RevisionConflictError } from '../../shared/errors/persistence.errors'
 import type {
     EntryId,
     ItemId,
     ListId,
     RankingList,
 } from '../../shared/types/list.types'
-import type {
-    Versioned,
-} from '../../shared/types/persistence.types'
+import type { Versioned } from '../../shared/types/persistence.types'
 import type {
     RankingEditorRepository,
     SaveRankingInput,
@@ -63,6 +59,7 @@ function upsert<T extends { id: string }>(
             : record,
     )
 }
+
 async function readRecords(
     catalogRepository: CatalogRepository,
     rankingRepository: RankingRepository,
@@ -135,6 +132,16 @@ export function useRankingWorkspace({
                 setError('')
                 setNeedsReload(false)
                 needsReloadRef.current = false
+
+                try {
+                    await imageStore.cleanupUnused()
+                } catch {
+                    if (generation === generationRef.current) {
+                        setError(
+                            'Alte Fotos konnten noch nicht gelöscht werden. Beim nächsten Laden wird es erneut versucht.',
+                        )
+                    }
+                }
             } catch {
                 if (generation !== generationRef.current) {
                     return
@@ -162,6 +169,7 @@ export function useRankingWorkspace({
     }, [
         catalogRepository,
         rankingRepository,
+        imageStore,
         loadRequest,
     ])
 
@@ -207,6 +215,16 @@ export function useRankingWorkspace({
             recordsRef.current = next
             setRecords(next)
 
+            try {
+                await imageStore.cleanupUnused()
+            } catch {
+                if (generation === generationRef.current) {
+                    setError(
+                        'Gespeichert. Alte Fotos konnten noch nicht gelöscht werden. Beim nächsten Laden wird es erneut versucht.',
+                    )
+                }
+            }
+
             return true
         } catch (mutationError) {
             if (generation !== generationRef.current) {
@@ -244,10 +262,13 @@ export function useRankingWorkspace({
                 return null
             }
 
-            if (photo && input.catalogChange) {
+            if (photo !== undefined && input.catalogChange) {
                 input.catalogChange.item = {
                     ...input.catalogChange.item,
-                    profileImageId: await imageStore.upload(photo),
+                    profileImageId:
+                        photo === null
+                            ? null
+                            : await imageStore.upload(photo),
                 }
             }
 
@@ -471,6 +492,7 @@ export function useRankingWorkspace({
         entryId: EntryId,
         name: string,
         position: number,
+        photo?: Blob | null,
     ): Promise<boolean> {
         return save((current) => {
             const storedList = current.lists.find(
@@ -511,7 +533,10 @@ export function useRankingWorkspace({
                 expectedRevision: storedList.revision,
             }
 
-            if (item.name !== storedItem.value.name) {
+            if (
+                item.name !== storedItem.value.name ||
+                photo !== undefined
+            ) {
                 input.catalogChange = {
                     item,
                     expectedRevision: storedItem.revision,
@@ -519,7 +544,7 @@ export function useRankingWorkspace({
             }
 
             return input
-        })
+        }, photo)
     }
 
     function removeEntry(
@@ -557,7 +582,11 @@ export function useRankingWorkspace({
     }
 
     function getItemImageId(itemId: ItemId): string | null {
-        return records.items.find((item) => item.value.id === itemId)?.value.profileImageId ?? null
+        return (
+            records.items.find(
+                (item) => item.value.id === itemId,
+            )?.value.profileImageId ?? null
+        )
     }
 
     return {

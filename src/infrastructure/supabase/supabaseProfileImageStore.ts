@@ -2,46 +2,124 @@ import type { ProfileImageStore } from '../../features/images/model/profileImage
 import { supabase } from './client'
 
 const bucket = 'profile-photos'
-const uploaded = new WeakMap<Blob, { ownerId: string; id: string }>()
+
+const uploaded = new WeakMap<
+    Blob,
+    { ownerId: string; id: string }
+>()
 
 async function ownerId(): Promise<string> {
     const { data, error } = await supabase.auth.getSession()
-    if (error || !data.session) throw new Error('Bitte melde dich erneut an.')
+
+    if (error || !data.session) {
+        throw new Error('Bitte melde dich erneut an.')
+    }
+
     return data.session.user.id
 }
 
 function path(owner: string, id: string): string {
-    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) {
+    const uuidPattern =
+        /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
+    if (!uuidPattern.test(id)) {
         throw new Error('Ungültige Foto-ID.')
     }
+
     return `${owner}/${id}.jpg`
 }
 
 export const supabaseProfileImageStore: ProfileImageStore = {
     async upload(photo) {
-        if (photo.type !== 'image/jpeg' || photo.size === 0 || photo.size > 2 * 1024 * 1024) {
+        if (
+            photo.type !== 'image/jpeg' ||
+            photo.size === 0 ||
+            photo.size > 2 * 1024 * 1024
+        ) {
             throw new Error('Das vorbereitete Foto ist ungültig.')
         }
 
         const owner = await ownerId()
         const cached = uploaded.get(photo)
-        if (cached?.ownerId === owner) return cached.id
+
+        if (cached?.ownerId === owner) {
+            return cached.id
+        }
 
         const id = crypto.randomUUID()
-        const { error } = await supabase.storage.from(bucket).upload(path(owner, id), photo, {
-            contentType: 'image/jpeg',
-            cacheControl: '3600',
-            upsert: false,
-        })
+
+        const { error } = await supabase.storage
+            .from(bucket)
+            .upload(path(owner, id), photo, {
+                contentType: 'image/jpeg',
+                cacheControl: '3600',
+                upsert: false,
+            })
+
         if (error) throw error
+
         uploaded.set(photo, { ownerId: owner, id })
+
         return id
     },
 
     async download(id) {
         const owner = await ownerId()
-        const { data, error } = await supabase.storage.from(bucket).download(path(owner, id))
+
+        const { data, error } = await supabase.storage
+            .from(bucket)
+            .download(path(owner, id))
+
         if (error) throw error
+
         return data
+    },
+
+    async cleanupUnused() {
+        const owner = await ownerId()
+
+        const { data, error } = await supabase
+            .from('profile_photo_cleanup')
+            .select('image_id')
+            .eq('owner_id', owner)
+            .order('created_at')
+            .limit(50)
+
+        if (error) throw error
+
+        for (const row of data) {
+            const filePath = path(owner, row.image_id)
+
+            const { error: removeError } = await supabase.storage
+                .from(bucket)
+                .remove([filePath])
+
+            if (removeError) throw removeError
+
+            const {
+                data: exists,
+                error: existsError,
+            } = await supabase.storage
+                .from(bucket)
+                .exists(filePath)
+
+            if (
+                existsError &&
+                existsError.status !== 400 &&
+                existsError.status !== 404
+            ) {
+                throw existsError
+            }
+
+            if (exists) continue
+
+            const { error: queueError } = await supabase
+                .from('profile_photo_cleanup')
+                .delete()
+                .eq('owner_id', owner)
+                .eq('image_id', row.image_id)
+
+            if (queueError) throw queueError
+        }
     },
 }

@@ -1,12 +1,16 @@
 import { useRef, useState } from 'react'
 import { Modal } from '../../../shared/components/Modal'
+import { PhotoPicker } from '../../images/components/PhotoPicker'
+import type { PhotoChange } from '../../images/model/profileImageStore'
 
 interface RankingEntryEditorProps {
     name: string
     position: number
+    imageId: string | null
     onSave: (
         name: string,
         position: number,
+        photo: PhotoChange,
     ) => Promise<boolean>
     onRemove: () => Promise<boolean>
     onCancel: () => void
@@ -15,13 +19,15 @@ interface RankingEntryEditorProps {
 export function RankingEntryEditor({
                                        name,
                                        position,
+                                       imageId,
                                        onSave,
                                        onRemove,
                                        onCancel,
                                    }: RankingEntryEditorProps) {
     const [editedName, setEditedName] = useState(name)
-    const [editedPosition, setEditedPosition] =
-        useState(String(position))
+    const [editedPosition, setEditedPosition] = useState(String(position))
+    const [photo, setPhoto] = useState<PhotoChange>(undefined)
+    const [preparingPhoto, setPreparingPhoto] = useState(false)
     const [error, setError] = useState('')
     const [pending, setPending] = useState(false)
     const pendingRef = useRef(false)
@@ -30,9 +36,7 @@ export function RankingEntryEditor({
         action: () => Promise<boolean>,
         failureMessage: string,
     ) {
-        if (pendingRef.current) {
-            return
-        }
+        if (pendingRef.current || preparingPhoto) return
 
         pendingRef.current = true
         setPending(true)
@@ -53,7 +57,7 @@ export function RankingEntryEditor({
     async function save() {
         const newPosition = Number(editedPosition)
 
-        if (editedName.trim() === '') {
+        if (!editedName.trim()) {
             setError('Bitte gib einen Namen ein.')
             return
         }
@@ -64,7 +68,7 @@ export function RankingEntryEditor({
         }
 
         await perform(
-            () => onSave(editedName, newPosition),
+            () => onSave(editedName, newPosition, photo),
             'Die Änderungen konnten nicht gespeichert werden.',
         )
     }
@@ -72,50 +76,47 @@ export function RankingEntryEditor({
     return (
         <Modal
             title="Eintrag bearbeiten"
-            busy={pending}
+            busy={pending || preparingPhoto}
             onClose={onCancel}
         >
-            <form
-                onSubmit={(event) => {
-                    event.preventDefault()
-                    void save()
-                }}
-            >
+            <form onSubmit={(event) => {
+                event.preventDefault()
+                void save()
+            }}>
                 <div>
                     <label htmlFor="edit-entry-name">Name</label>
-
                     <input
                         id="edit-entry-name"
                         type="text"
                         autoFocus
                         value={editedName}
-                        onChange={(event) =>
-                            setEditedName(event.target.value)
-                        }
+                        onChange={(event) => setEditedName(event.target.value)}
                         disabled={pending}
                         required
                     />
                 </div>
 
-                <p>
-                    Eine Namensänderung gilt für dieses Profil
-                    in allen Listen, die es verwenden.
+                <PhotoPicker
+                    imageId={imageId}
+                    value={photo}
+                    onChange={setPhoto}
+                    onBusyChange={setPreparingPhoto}
+                    name={editedName}
+                />
+
+                <p className="field-hint">
+                    Name und Foto gelten in allen Listen mit diesem Profil.
                 </p>
 
                 <div>
-                    <label htmlFor="edit-entry-position">
-                        Position
-                    </label>
-
+                    <label htmlFor="edit-entry-position">Position</label>
                     <input
                         id="edit-entry-position"
                         type="number"
                         min="1"
                         step="1"
                         value={editedPosition}
-                        onChange={(event) =>
-                            setEditedPosition(event.target.value)
-                        }
+                        onChange={(event) => setEditedPosition(event.target.value)}
                         disabled={pending}
                         required
                     />
@@ -134,13 +135,13 @@ export function RankingEntryEditor({
                 <button
                     type="button"
                     className="modal__danger"
+                    disabled={pending}
                     onClick={() => {
                         void perform(
                             onRemove,
                             'Der Eintrag konnte nicht entfernt werden.',
                         )
                     }}
-                    disabled={pending}
                 >
                     Aus Liste entfernen
                 </button>

@@ -1,5 +1,9 @@
 import { useState } from 'react'
-import type { EntryId, ItemId, RankingList } from '../../../shared/types/list.types'
+import type {
+    EntryId,
+    ItemId,
+    RankingList,
+} from '../../../shared/types/list.types'
 import { CreateRankingEntryDialog } from '../components/CreateRankingEntryDialog'
 import { RankingEntryEditor } from '../components/RankingEntryEditor'
 import { SortableRankingEntries } from '../components/SortableRankingEntries'
@@ -7,44 +11,66 @@ import { getRankingSize } from '../model/ranking.operations'
 
 interface RankingDetailPageProps {
     list: RankingList
-    catalogItems: readonly { id: ItemId; name: string; profileImageId: string | null }[]
+    catalogItems: readonly {
+        id: ItemId
+        name: string
+        profileImageId: string | null
+    }[]
     createOpen: boolean
     onCloseCreate: () => void
     getItemName: (itemId: ItemId) => string
     getItemImageId: (itemId: ItemId) => string | null
-    onAddEntry: (name: string, position: number, photo?: Blob | null) => Promise<boolean>
-    onAddExistingEntry: (itemId: ItemId, position: number) => Promise<boolean>
+    onAddEntry: (
+        name: string,
+        position: number,
+        photo?: Blob | null,
+    ) => Promise<boolean>
+    onAddExistingEntry: (
+        itemId: ItemId,
+        position: number,
+    ) => Promise<boolean>
     onUpdateEntry: (
         entryId: EntryId,
         name: string,
         position: number,
+        photo?: Blob | null,
     ) => Promise<boolean>
     onRemoveEntry: (entryId: EntryId) => Promise<boolean>
-    onReorderEntry: (entryId: EntryId, toIndex: number) => Promise<boolean>
+    onReorderEntry: (
+        entryId: EntryId,
+        toIndex: number,
+    ) => Promise<boolean>
 }
 
 export function RankingDetailPage({
-    list,
-    catalogItems,
-    createOpen,
-    onCloseCreate,
-    getItemName,
-    getItemImageId,
-    onAddEntry,
-    onAddExistingEntry,
-    onUpdateEntry,
-    onRemoveEntry,
-    onReorderEntry,
-}: RankingDetailPageProps) {
-    const [editingEntryId, setEditingEntryId] = useState<EntryId | null>(null)
-    const editingEntry = list.entries.find((entry) => entry.id === editingEntryId)
+                                      list,
+                                      catalogItems,
+                                      createOpen,
+                                      onCloseCreate,
+                                      getItemName,
+                                      getItemImageId,
+                                      onAddEntry,
+                                      onAddExistingEntry,
+                                      onUpdateEntry,
+                                      onRemoveEntry,
+                                      onReorderEntry,
+                                  }: RankingDetailPageProps) {
+    const [editingEntryId, setEditingEntryId] =
+        useState<EntryId | null>(null)
+
+    const editingEntry = list.entries.find(
+        (entry) => entry.id === editingEntryId,
+    )
+
     const size = getRankingSize(list)
 
     return (
         <main className="page">
             <div className="page-heading">
                 <h1>{list.title}</h1>
-                <span className="count">{size === 0 ? 'Leer' : 'Top ' + size}</span>
+                <span className="count">
+                    {size === 0 ? 'Leer' : 'Top ' + size}
+                </span>
             </div>
 
             {createOpen && (
@@ -62,14 +88,30 @@ export function RankingDetailPage({
                     key={editingEntry.id}
                     name={getItemName(editingEntry.itemId)}
                     position={editingEntry.position}
-                    onSave={async (name, position) => {
-                        const saved = await onUpdateEntry(editingEntry.id, name, position)
-                        if (saved) setEditingEntryId(null)
+                    imageId={getItemImageId(editingEntry.itemId)}
+                    onSave={async (name, position, photo) => {
+                        const saved = await onUpdateEntry(
+                            editingEntry.id,
+                            name,
+                            position,
+                            photo,
+                        )
+
+                        if (saved) {
+                            setEditingEntryId(null)
+                        }
+
                         return saved
                     }}
                     onRemove={async () => {
-                        const removed = await onRemoveEntry(editingEntry.id)
-                        if (removed) setEditingEntryId(null)
+                        const removed = await onRemoveEntry(
+                            editingEntry.id,
+                        )
+
+                        if (removed) {
+                            setEditingEntryId(null)
+                        }
+
                         return removed
                     }}
                     onCancel={() => setEditingEntryId(null)}

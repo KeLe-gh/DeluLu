@@ -39,6 +39,24 @@ export type Database = {
     }
     public: {
         Tables: {
+            profile_photo_cleanup: {
+                Row: {
+                    owner_id: string
+                    image_id: string
+                    created_at: string
+                }
+                Insert: {
+                    owner_id: string
+                    image_id: string
+                    created_at?: string
+                }
+                Update: {
+                    owner_id?: string
+                    image_id?: string
+                    created_at?: string
+                }
+                Relationships: []
+            }
             catalog_items: {
                 Row: {
                     background_image_id: string | null

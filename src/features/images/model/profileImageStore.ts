@@ -6,4 +6,5 @@ export type PhotoChange = Blob | null | undefined
 export interface ProfileImageStore {
     upload(photo: Blob): Promise<ImageId>
     download(id: ImageId): Promise<Blob>
+    cleanupUnused(): Promise<void>
 }
