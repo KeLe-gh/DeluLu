@@ -1,12 +1,8 @@
 interface HomePageProps {
     onOpenLists: () => void
-    onOpenAppearance: () => void
 }
 
-export function HomePage({
-                             onOpenLists,
-                             onOpenAppearance,
-                         }: HomePageProps) {
+export function HomePage({ onOpenLists }: HomePageProps) {
     return (
         <main className="page">
             <div className="page-heading">
@@ -50,28 +46,6 @@ export function HomePage({
 
                     <span>Serien</span>
                     <span className="badge">Bald</span>
-                </button>
-
-                <button
-                    type="button"
-                    className="feature-card"
-                    onClick={onOpenAppearance}
-                >
-                    <span
-                        className="feature-card__icon"
-                        aria-hidden="true"
-                    >
-                        ⚙
-                    </span>
-
-                    <span>Aussehen</span>
-
-                    <span
-                        className="feature-card__arrow"
-                        aria-hidden="true"
-                    >
-                        ›
-                    </span>
                 </button>
             </nav>
         </main>

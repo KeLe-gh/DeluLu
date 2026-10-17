@@ -3,17 +3,18 @@ import { createPortal } from 'react-dom'
 import { Modal } from '../../../shared/components/Modal'
 import './BackgroundCropper.css'
 
-const aspectRatio = 4
 const clamp = (value: number) => Math.max(0, Math.min(1, value))
 
 export function BackgroundCropper({
                                       file,
                                       onConfirm,
                                       onCancel,
+                                      aspectRatio = 4,
                                   }: {
     file: File
     onConfirm: (photo: Blob) => void
     onCancel: () => void
+    aspectRatio?: number
 }) {
     const zoomId = useId()
     const [image, setImage] = useState<HTMLImageElement | null>(null)
@@ -22,6 +23,7 @@ export function BackgroundCropper({
     const [error, setError] = useState('')
     const [saving, setSaving] = useState(false)
     const savingRef = useRef(false)
+
     const drag = useRef<{
         id: number
         clientX: number
@@ -68,6 +70,7 @@ export function BackgroundCropper({
 
         const overflowX =
             image.naturalWidth * scale - frame.clientWidth
+
         const overflowY =
             image.naturalHeight * scale - frame.clientHeight
 
@@ -97,11 +100,20 @@ export function BackgroundCropper({
             const cropHeight = cropWidth / aspectRatio
             const canvas = document.createElement('canvas')
 
-            canvas.width = Math.max(
-                4,
-                Math.floor(Math.min(1024, cropWidth) / 4) * 4,
+            const outputScale = Math.min(
+                1,
+                1024 / Math.max(cropWidth, cropHeight),
             )
-            canvas.height = canvas.width / aspectRatio
+
+            canvas.width = Math.max(
+                1,
+                Math.round(cropWidth * outputScale),
+            )
+
+            canvas.height = Math.max(
+                1,
+                Math.round(cropHeight * outputScale),
+            )
 
             const context = canvas.getContext('2d')
 
@@ -160,6 +172,11 @@ export function BackgroundCropper({
 
                 <div
                     className="background-cropper__frame"
+                    style={{
+                        aspectRatio,
+                        width: `min(100%, ${50 * aspectRatio}svh)`,
+                        marginInline: 'auto',
+                    }}
                     role="group"
                     aria-label="Bildausschnitt, mit Pfeiltasten verschieben"
                     tabIndex={0}

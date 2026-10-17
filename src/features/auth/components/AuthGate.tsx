@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { Fragment, useState } from 'react'
 import type { ReactNode } from 'react'
 import { useAuth } from '../hooks/useAuth'
 import type { AuthService } from '../model/auth.types'
@@ -10,6 +10,7 @@ interface AuthGateProps {
     path: string
     onNavigate: (path: string, replace?: boolean) => void
     children: ReactNode
+    accountActions?: ReactNode
 }
 
 export function AuthGate({
@@ -17,6 +18,7 @@ export function AuthGate({
                              path,
                              onNavigate,
                              children,
+                             accountActions,
                          }: AuthGateProps) {
     const { user, isLoading } = useAuth(authService)
     const [isSigningOut, setIsSigningOut] = useState(false)
@@ -50,7 +52,9 @@ export function AuthGate({
     if (isLoading) {
         return (
             <main>
-                <p role="status">Anmeldung wird geladen …</p>
+                <p role="status">
+                    Anmeldung wird geladen …
+                </p>
             </main>
         )
     }
@@ -72,6 +76,7 @@ export function AuthGate({
             ) : (
                 <main>
                     <h1>Einladung unvollständig</h1>
+
                     <p>
                         Bitte öffne den vollständigen
                         Einladungslink.
@@ -98,10 +103,11 @@ export function AuthGate({
     }
 
     return (
-        <>
+        <Fragment key={user.id}>
             {isJoinPage ? (
                 <main>
                     <h1>Du bist bereits angemeldet 💜</h1>
+
                     <p>
                         Öffne deine Listen oder melde dich unten
                         ab, um ein anderes Konto zu erstellen.
@@ -129,6 +135,12 @@ export function AuthGate({
                             : 'Du bist angemeldet.'}
                     </p>
 
+                    {!isJoinPage && accountActions && (
+                        <div style={{ marginBlock: '0.5rem' }}>
+                            {accountActions}
+                        </div>
+                    )}
+
                     <button
                         type="button"
                         onClick={signOut}
@@ -142,6 +154,6 @@ export function AuthGate({
                     {error && <p role="alert">{error}</p>}
                 </details>
             </footer>
-        </>
+        </Fragment>
     )
 }

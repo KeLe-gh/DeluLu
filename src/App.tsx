@@ -23,11 +23,9 @@ type Navigation = ReturnType<typeof useAppNavigation>
 function WorkspaceScreen({
                              workspace,
                              navigation,
-                             onOpenAppearance,
                          }: {
     workspace: Workspace
     navigation: Navigation
-    onOpenAppearance: () => void
 }) {
     const [createOpen, setCreateOpen] = useState(false)
     const { path, navigate, back } = navigation
@@ -105,7 +103,6 @@ function WorkspaceScreen({
             {path === '/' ? (
                 <HomePage
                     onOpenLists={() => navigate('/lists')}
-                    onOpenAppearance={onOpenAppearance}
                 />
             ) : path === '/lists' ? (
                 <ListMenuPage
@@ -177,7 +174,6 @@ function WorkspaceScreen({
 }
 
 function DeluluApp() {
-    const [appearanceOpen, setAppearanceOpen] = useState(false)
     const navigation = useAppNavigation()
 
     const workspace = useRankingWorkspace({
@@ -222,35 +218,23 @@ function DeluluApp() {
     ) : null
 
     return (
-        <>
-            <AppAppearance
-                open={appearanceOpen}
-                onClose={() => setAppearanceOpen(false)}
-                repository={supabaseAppearanceRepository}
-                imageStore={supabaseProfileImageStore}
-            />
+        <ModalFeedbackContext.Provider
+            value={{ busy, blocked, content: feedback }}
+        >
+            <div className="app-shell">
+                {feedback}
 
-            <ModalFeedbackContext.Provider
-                value={{ busy, blocked, content: feedback }}
-            >
-                <div className="app-shell">
-                    {feedback}
-
-                    {workspace.hasLoaded && (
-                        <div inert={blocked} aria-busy={busy}>
-                            <WorkspaceScreen
-                                key={navigation.path}
-                                workspace={workspace}
-                                navigation={navigation}
-                                onOpenAppearance={() =>
-                                    setAppearanceOpen(true)
-                                }
-                            />
-                        </div>
-                    )}
-                </div>
-            </ModalFeedbackContext.Provider>
-        </>
+                {workspace.hasLoaded && (
+                    <div inert={blocked} aria-busy={busy}>
+                        <WorkspaceScreen
+                            key={navigation.path}
+                            workspace={workspace}
+                            navigation={navigation}
+                        />
+                    </div>
+                )}
+            </div>
+        </ModalFeedbackContext.Provider>
     )
 }
 
@@ -262,6 +246,14 @@ function App() {
             authService={supabaseAuthService}
             path={navigation.path}
             onNavigate={navigation.navigate}
+            accountActions={
+                <ProfileImageContext.Provider value={supabaseProfileImageStore}>
+                    <AppAppearance
+                        repository={supabaseAppearanceRepository}
+                        imageStore={supabaseProfileImageStore}
+                    />
+                </ProfileImageContext.Provider>
+            }
         >
             <ProfileImageContext.Provider value={supabaseProfileImageStore}>
                 <DeluluApp />
