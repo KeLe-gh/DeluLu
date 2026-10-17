@@ -32,7 +32,7 @@ export function HomePage({
     return (
         <main className="page">
             <div className="page-heading">
-                <h1>Dein Bereich</h1>
+                <h1>DeluLu is the SoluLu</h1>
             </div>
 
             <nav className="feature-grid" aria-label="Bereiche">
