@@ -75,51 +75,53 @@ export const supabaseProfileImageStore: ProfileImageStore = {
         return data
     },
 
-    async cleanupUnused() {
-        const owner = await ownerId()
+        async cleanupUnused() {
+            await ownerId()
 
-        const { data, error } = await supabase
-            .from('profile_photo_cleanup')
-            .select('image_id')
-            .eq('owner_id', owner)
-            .order('created_at')
-            .limit(50)
+            const { data, error } = await supabase.rpc(
+                'list_profile_photo_cleanup',
+            )
 
-        if (error) throw error
+            if (error) throw error
 
-        for (const row of data) {
-            const filePath = path(owner, row.image_id)
+            for (const row of data ?? []) {
+                const filePath = path(
+                    row.owner_id,
+                    row.image_id,
+                )
 
-            const { error: removeError } = await supabase.storage
-                .from(bucket)
-                .remove([filePath])
+                const { error: removeError } = await supabase.storage
+                    .from(bucket)
+                    .remove([filePath])
 
-            if (removeError) throw removeError
+                if (removeError) throw removeError
 
-            const {
-                data: exists,
-                error: existsError,
-            } = await supabase.storage
-                .from(bucket)
-                .exists(filePath)
+                const {
+                    data: exists,
+                    error: existsError,
+                } = await supabase.storage
+                    .from(bucket)
+                    .exists(filePath)
 
-            if (
-                existsError &&
-                existsError.status !== 400 &&
-                existsError.status !== 404
-            ) {
-                throw existsError
+                if (
+                    existsError &&
+                    existsError.status !== 400 &&
+                    existsError.status !== 404
+                ) {
+                    throw existsError
+                }
+
+                if (exists) continue
+
+                const { error: queueError } = await supabase.rpc(
+                    'ack_profile_photo_cleanup',
+                    {
+                        p_owner_id: row.owner_id,
+                        p_image_id: row.image_id,
+                    },
+                )
+
+                if (queueError) throw queueError
             }
-
-            if (exists) continue
-
-            const { error: queueError } = await supabase
-                .from('profile_photo_cleanup')
-                .delete()
-                .eq('owner_id', owner)
-                .eq('image_id', row.image_id)
-
-            if (queueError) throw queueError
-        }
-    },
+        },
 }

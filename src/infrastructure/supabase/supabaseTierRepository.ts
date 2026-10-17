@@ -11,7 +11,7 @@ import type {
     TierEntryRow,
 } from './appDatabase.types'
 
-function mapList(
+export function mapList(
     row: TierListRow,
     rows: readonly TierRow[],
     entries: readonly TierEntryRow[],

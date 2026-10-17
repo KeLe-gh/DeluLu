@@ -1,18 +1,9 @@
 import type { ComponentProps } from 'react'
 import { TierBoard } from './TierBoard'
-import { HearMeOutCake } from './HearMeOutCake'
+import { SortableCake } from './SortableCake'
 
-export function TierListView(
-    props: ComponentProps<typeof TierBoard>,
-) {
-    if (props.list.styleId === 'cake') {
-        return (
-            <HearMeOutCake
-                list={props.list}
-                items={props.items}
-            />
-        )
-    }
-
-    return <TierBoard {...props} />
+export function TierListView(props: ComponentProps<typeof TierBoard>) {
+    return props.list.styleId === 'cake'
+        ? <SortableCake {...props} />
+        : <TierBoard {...props} />
 }

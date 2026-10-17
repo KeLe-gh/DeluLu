@@ -1,0 +1,81 @@
+.sharing-button {
+    min-height: 44px;
+    padding: 0.6rem 0.8rem;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    background: var(--surface);
+    color: var(--accent);
+    font: inherit;
+}
+
+.sharing-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.6rem;
+    margin-block: 1rem;
+}
+
+.sharing-stack {
+    display: grid;
+    gap: 0.9rem;
+}
+
+.shared-entries {
+    display: grid;
+    gap: 0.75rem;
+    padding: 0;
+    margin-block: 1rem;
+    list-style: none;
+}
+
+.shared-entry {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    min-height: 76px;
+    padding: 1rem;
+    overflow: hidden;
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    background: var(--surface);
+}
+
+.shared-entry--background {
+    background: #342d40;
+    color: white;
+}
+
+.shared-entry__background {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+}
+
+.shared-entry__background::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: #000a;
+}
+
+.shared-entry > :not(.shared-entry__background) {
+    position: relative;
+}
+
+.shared-entry__position {
+    flex-shrink: 0;
+    min-width: 2ch;
+    font-weight: 650;
+}
+
+.shared-entry__name {
+    min-width: 0;
+    overflow-wrap: anywhere;
+}
+
+.shared-entry__name small {
+    display: block;
+    margin-top: 0.3rem;
+    white-space: pre-wrap;
+}

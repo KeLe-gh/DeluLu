@@ -19,6 +19,7 @@ interface CreateRankingEntryDialogProps {
         name: string,
         position: number,
         photo?: Blob | null,
+        background?: Blob | null,
     ) => Promise<boolean>
     onAddExistingEntry: (
         itemId: ItemId,
@@ -37,14 +38,20 @@ export function CreateRankingEntryDialog({
     const [mode, setMode] = useState<'new' | 'existing'>('new')
     const [name, setName] = useState('')
     const [itemId, setItemId] = useState('')
+
     const [position, setPosition] = useState(
         String(getRankingSize(list) + 1),
     )
+
     const [pending, setPending] = useState(false)
     const [photo, setPhoto] = useState<Blob | null>(null)
+    const [background, setBackground] = useState<Blob | null>(null)
     const [preparingPhoto, setPreparingPhoto] = useState(false)
+    const [preparingBackground, setPreparingBackground] = useState(false)
     const [error, setError] = useState('')
     const pendingRef = useRef(false)
+
+    const preparing = preparingPhoto || preparingBackground
 
     const usedIds = new Set(
         list.entries.map((entry) => entry.itemId),
@@ -54,10 +61,12 @@ export function CreateRankingEntryDialog({
         .filter((item) => !usedIds.has(item.id))
         .sort((a, b) => a.name.localeCompare(b.name, 'de-CH'))
 
-    const selected = available.find((item) => item.id === itemId)
+    const selected = available.find(
+        (item) => item.id === itemId,
+    )
 
     async function save() {
-        if (pendingRef.current || preparingPhoto) return
+        if (pendingRef.current || preparing) return
 
         const newPosition = Number(position)
 
@@ -82,16 +91,28 @@ export function CreateRankingEntryDialog({
 
         try {
             const saved = mode === 'new'
-                ? await onAddEntry(name.trim(), newPosition, photo)
-                : await onAddExistingEntry(itemId, newPosition)
+                ? await onAddEntry(
+                    name.trim(),
+                    newPosition,
+                    photo,
+                    background,
+                )
+                : await onAddExistingEntry(
+                    itemId,
+                    newPosition,
+                )
 
             if (saved) {
                 onClose()
             } else {
-                setError('Der Eintrag konnte nicht gespeichert werden.')
+                setError(
+                    'Der Eintrag konnte nicht gespeichert werden.',
+                )
             }
         } catch {
-            setError('Der Eintrag konnte nicht gespeichert werden.')
+            setError(
+                'Der Eintrag konnte nicht gespeichert werden.',
+            )
         } finally {
             pendingRef.current = false
             setPending(false)
@@ -101,7 +122,7 @@ export function CreateRankingEntryDialog({
     return (
         <Modal
             title="Neuer Eintrag"
-            busy={pending || preparingPhoto}
+            busy={pending || preparing}
             onClose={onClose}
         >
             <form onSubmit={(event) => {
@@ -158,25 +179,13 @@ export function CreateRankingEntryDialog({
                     <CatalogProfilePicker
                         items={available}
                         value={itemId}
-                        disabled={pending || preparingPhoto}
+                        disabled={pending || preparing}
                         onChange={(id) => {
                             setItemId(id)
                             setError('')
                         }}
                     />
                 )}
-
-                {mode === 'new' ? (
-                    <PhotoPicker
-                        imageId={null}
-                        value={photo}
-                        onChange={(value) =>
-                            setPhoto(value ?? null)
-                        }
-                        onBusyChange={setPreparingPhoto}
-                        name={name}
-                    />
-                ) : null}
 
                 <div>
                     <label htmlFor="new-entry-position">
@@ -198,13 +207,38 @@ export function CreateRankingEntryDialog({
                     />
                 </div>
 
+                {mode === 'new' && (
+                    <>
+                        <PhotoPicker
+                            imageId={null}
+                            value={photo}
+                            onChange={(value) =>
+                                setPhoto(value ?? null)
+                            }
+                            onBusyChange={setPreparingPhoto}
+                            name={name}
+                        />
+
+                        <PhotoPicker
+                            kind="background"
+                            imageId={null}
+                            value={background}
+                            onChange={(value) =>
+                                setBackground(value ?? null)
+                            }
+                            onBusyChange={setPreparingBackground}
+                            name={name}
+                        />
+                    </>
+                )}
+
                 {error && <p role="alert">{error}</p>}
 
                 <button
                     type="submit"
                     disabled={
                         pending ||
-                        preparingPhoto ||
+                        preparing ||
                         (mode === 'existing' && !selected)
                     }
                 >

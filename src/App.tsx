@@ -27,6 +27,14 @@ const TierWorkspace = lazy(
     () => import('./features/tiers/TierWorkspace'),
 )
 
+const SharedRankingsWorkspace = lazy(
+    () => import('./features/sharing/SharedRankingsWorkspace'),
+)
+
+const MediaWorkspace = lazy(
+    () => import('./features/media/MediaWorkspace'),
+)
+
 type Workspace = ReturnType<typeof useRankingWorkspace>
 type Navigation = ReturnType<typeof useAppNavigation>
 
@@ -83,6 +91,7 @@ function WorkspaceScreen({
                 <ListMenuPage
                     onOpenRankings={() => navigate('/rankings')}
                     onOpenTiers={() => navigate('/tiers')}
+                    onOpenShared={() => navigate('/shared')}
                 />
             ) : path === '/rankings' ? (
                 <RankingsPage
@@ -105,12 +114,13 @@ function WorkspaceScreen({
                     onCloseCreate={() => setCreateOpen(false)}
                     getItemName={workspace.getItemName}
                     getItemImageId={workspace.getItemImageId}
-                    onAddEntry={(name, position, photo) =>
+                    onAddEntry={(name, position, photo, background) =>
                         workspace.addEntry(
                             list.id,
                             name,
                             position,
                             photo,
+                            background,
                         )
                     }
                     onAddExistingEntry={(id, position) =>
@@ -214,25 +224,50 @@ function RankingApp() {
     )
 }
 
-const MediaWorkspace = lazy(
-    () => import('./features/media/MediaWorkspace'),
-)
-
 function DeluluApp() {
     const navigation = useAppNavigation()
+
+    if (
+        navigation.path === '/shared' ||
+        navigation.path.startsWith('/shared/') ||
+        navigation.path === '/share' ||
+        navigation.path.startsWith('/share/') ||
+        navigation.path === '/tier-share' ||
+        navigation.path.startsWith('/tier-share/') ||
+        navigation.path === '/shared-tiers' ||
+        navigation.path.startsWith('/shared-tiers/')
+    ) {
+        return (
+            <Suspense
+                fallback={
+                    <main className="page">
+                        <p role="status">Liste wird geladen …</p>
+                    </main>
+                }
+            >
+                <SharedRankingsWorkspace
+                    path={navigation.path}
+                    onNavigate={navigation.navigate}
+                    onBack={navigation.back}
+                />
+            </Suspense>
+        )
+    }
 
     if (
         navigation.path === '/media' ||
         navigation.path.startsWith('/media/')
     ) {
         return (
-            <Suspense fallback={
-                          <main className="page">
-                              <p role="status">
-                                  Serien und Filme werden geladen …
-                              </p>
-                          </main>
-                      }>
+            <Suspense
+                fallback={
+                    <main className="page">
+                        <p role="status">
+                            Serien und Filme werden geladen …
+                        </p>
+                    </main>
+                }
+            >
                 <MediaWorkspace />
             </Suspense>
         )
@@ -240,11 +275,13 @@ function DeluluApp() {
 
     if (navigation.path === '/catalog') {
         return (
-            <Suspense fallback={
-                          <main className="page">
-                              <p role="status">Katalog wird geladen …</p>
-                          </main>
-                      }>
+            <Suspense
+                fallback={
+                    <main className="page">
+                        <p role="status">Katalog wird geladen …</p>
+                    </main>
+                }
+            >
                 <CatalogWorkspace
                     repository={supabaseCatalogRepository}
                     imageStore={supabaseProfileImageStore}
@@ -260,13 +297,13 @@ function DeluluApp() {
         navigation.path.startsWith('/tiers/')
     ) {
         return (
-            <Suspense fallback={
-                          <main className="page">
-                              <p role="status">
-                                  Tierlisten werden geladen …
-                              </p>
-                          </main>
-                      }>
+            <Suspense
+                fallback={
+                    <main className="page">
+                        <p role="status">Tierlisten werden geladen …</p>
+                    </main>
+                }
+            >
                 <TierWorkspace
                     repository={supabaseTierRepository}
                     catalogRepository={supabaseCatalogRepository}

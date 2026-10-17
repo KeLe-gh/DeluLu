@@ -421,6 +421,7 @@ export function useRankingWorkspace({
         name: string,
         position: number,
         photo?: Blob | null,
+        background?: Blob | null,
     ): Promise<boolean> {
         return save((current) => {
             const storedList = current.lists.find(
@@ -462,7 +463,7 @@ export function useRankingWorkspace({
                     expectedRevision: null,
                 },
             }
-        }, photo)
+        }, photo, background)
     }
 
     function addExistingEntry(

@@ -31,7 +31,129 @@ export type TierEntryRow = {
 
 export type AppDatabase = Omit<Database, 'public'> & {
     public: Omit<Database['public'], 'Tables' | 'Functions'> & {
-        Functions: Database['public']['Functions'] & {
+        Functions: Database['public']['Functions'] & import('./tierSharing.types').TierSharingFunctions & {
+            edit_shared_ranking_entry: {
+                Args: {
+                    p_list_id: string
+                    p_expected_revision: number
+                    p_entry_id: string
+                    p_catalog_expected_revision: number
+                    p_name: string
+                    p_position: number
+                    p_images: {
+                        profile_image_id?: string | null
+                        background_image_id?: string | null
+                    }
+                }
+                Returns: number
+            }
+            reserve_ranking_photo: {
+                Args: {
+                    p_list_id: string
+                    p_expected_revision: number
+                }
+                Returns: {
+                    owner_id: string
+                    image_id: string
+                }
+            }
+
+            cancel_ranking_photo: {
+                Args: { p_image_id: string }
+                Returns: undefined
+            }
+
+            list_profile_photo_cleanup: {
+                Args: Record<string, never>
+                Returns: {
+                    owner_id: string
+                    image_id: string
+                }[]
+            }
+
+            ack_profile_photo_cleanup: {
+                Args: {
+                    p_owner_id: string
+                    p_image_id: string
+                }
+                Returns: boolean
+            }
+
+            list_ranking_add_catalog: {
+                Args: { p_list_id: string }
+                Returns: Database['public']['Tables']['catalog_items']['Row'][]
+                SetofOptions: {
+                    from: '*'
+                    to: 'catalog_items'
+                    isOneToOne: false
+                    isSetofReturn: true
+                }
+            }
+
+            add_shared_ranking_entry: {
+                Args: {
+                    p_list_id: string
+                    p_expected_revision: number
+                    p_entry_id: string
+                    p_position: number
+                    p_name?: string
+                    p_source_item_id?: string
+                    p_source_expected_revision?: number
+                    p_profile_image_id?: string
+                    p_background_image_id?: string
+                }
+                Returns: number
+            }
+            update_shared_ranking_entries: {
+                Args: {
+                    p_list_id: string
+                    p_expected_revision: number
+                    p_entries: {
+                        id: string
+                        position: number
+                    }[]
+                }
+                Returns: number
+            }
+            create_ranking_share_link: {
+                Args: { p_list_id: string; p_rotate?: boolean }
+                Returns: string
+            }
+
+            join_ranking_share: {
+                Args: { p_token: string }
+                Returns: string
+            }
+
+            list_shared_rankings: {
+                Args: Record<string, never>
+                Returns: Database['public']['Tables']['ranking_lists']['Row'][]
+                SetofOptions: {
+                    from: '*'
+                    to: 'ranking_lists'
+                    isOneToOne: false
+                    isSetofReturn: true
+                }
+            }
+
+            get_shared_ranking: {
+                Args: { p_list_id: string }
+                Returns: {
+                    ranking_list: Database['public']['Tables']['ranking_lists']['Row']
+                    entries: Database['public']['Tables']['ranking_entries']['Row'][]
+                    catalog_items: Database['public']['Tables']['catalog_items']['Row'][]
+                }
+            }
+
+            leave_shared_ranking: {
+                Args: { p_list_id: string }
+                Returns: boolean
+            }
+
+            stop_ranking_sharing: {
+                Args: { p_list_id: string }
+                Returns: boolean
+            }
             delete_media_title: {
                 Args: {
                     p_id: string

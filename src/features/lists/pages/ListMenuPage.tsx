@@ -1,11 +1,13 @@
 interface ListMenuPageProps {
     onOpenRankings: () => void
     onOpenTiers: () => void
+    onOpenShared: () => void
 }
 
 export function ListMenuPage({
                                  onOpenRankings,
                                  onOpenTiers,
+                                 onOpenShared,
                              }: ListMenuPageProps) {
     return (
         <main className="page">
@@ -13,7 +15,10 @@ export function ListMenuPage({
                 <h1>Listen</h1>
             </div>
 
-            <nav className="feature-grid" aria-label="Listenarten">
+            <nav
+                className="feature-grid"
+                aria-label="Listenarten"
+            >
                 <button
                     type="button"
                     className="feature-card"
@@ -58,6 +63,29 @@ export function ListMenuPage({
                     </span>
                 </button>
             </nav>
+
+            <button
+                type="button"
+                className="feature-card"
+                style={{ marginTop: '0.9rem' }}
+                onClick={onOpenShared}
+            >
+                <span
+                    className="feature-card__icon"
+                    aria-hidden="true"
+                >
+                    ♡
+                </span>
+
+                <span>Geteilte Listen</span>
+
+                <span
+                    className="feature-card__arrow"
+                    aria-hidden="true"
+                >
+                    ›
+                </span>
+            </button>
         </main>
     )
 }

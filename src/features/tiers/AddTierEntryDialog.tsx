@@ -18,40 +18,31 @@ export function AddTierEntryDialog({
     onClose: () => void
 }) {
     const nameId = useId()
-
     const [entryId] = useState(() => crypto.randomUUID())
     const [newItemId] = useState(() => crypto.randomUUID())
     const [mode, setMode] = useState<'new' | 'catalog'>('new')
     const [name, setName] = useState('')
     const [itemId, setItemId] = useState('')
     const [photo, setPhoto] = useState<Blob | null>(null)
-    const [preparing, setPreparing] = useState(false)
+    const [background, setBackground] = useState<Blob | null>(null)
+    const [preparingPhoto, setPreparingPhoto] = useState(false)
+    const [preparingBackground, setPreparingBackground] = useState(false)
     const [pending, setPending] = useState(false)
     const [error, setError] = useState('')
-    const pendingRef = useRef(false)
+    const working = useRef(false)
 
-    const used = new Set(
-        list.entries.map((entry) => entry.itemId),
-    )
+    const preparing = preparingPhoto || preparingBackground
 
     const available = items
-        .filter((item) => !used.has(item.id))
+        .filter((item) =>
+            !list.entries.some((entry) => entry.itemId === item.id),
+        )
         .sort((a, b) => a.name.localeCompare(b.name, 'de-CH'))
 
     const selected = available.find((item) => item.id === itemId)
-    const targetId = mode === 'new' ? newItemId : itemId
-
-    const alreadyAdded = list.entries.some((entry) =>
-        entry.id === entryId && entry.itemId === targetId,
-    )
 
     async function save() {
-        if (pendingRef.current || preparing) return
-
-        if (alreadyAdded) {
-            onClose()
-            return
-        }
+        if (working.current || preparing) return
 
         if (mode === 'new' && !name.trim()) {
             setError('Bitte gib einen Namen ein.')
@@ -63,7 +54,7 @@ export function AddTierEntryDialog({
             return
         }
 
-        pendingRef.current = true
+        working.current = true
         setPending(true)
         setError('')
 
@@ -75,6 +66,7 @@ export function AddTierEntryDialog({
                     source: 'new',
                     name: name.trim(),
                     photo,
+                    background,
                 }
                 : {
                     id: entryId,
@@ -82,110 +74,106 @@ export function AddTierEntryDialog({
                     source: 'catalog',
                 }
 
-            if (await onAdd(draft)) {
-                onClose()
-            }
+            if (await onAdd(draft)) onClose()
         } catch {
             setError(
                 'Der Eintrag konnte nicht gespeichert werden. Bitte versuche es erneut.',
             )
         } finally {
-            pendingRef.current = false
+            working.current = false
             setPending(false)
         }
     }
 
-    return (
-        <Modal
-            title="Neuer Eintrag"
-            busy={pending || preparing}
-            onClose={onClose}
-        >
-            <form onSubmit={(event) => {
-                event.preventDefault()
-                void save()
-            }}>
-                <div
-                    className="segmented"
-                    role="group"
-                    aria-label="Profilquelle"
+    return <Modal
+        title="Neuer Eintrag"
+        busy={pending || preparing}
+        onClose={onClose}
+    >
+        <form onSubmit={(event) => {
+            event.preventDefault()
+            void save()
+        }}>
+            <div
+                className="segmented"
+                role="group"
+                aria-label="Profilquelle"
+            >
+                <button
+                    type="button"
+                    aria-pressed={mode === 'new'}
+                    onClick={() => {
+                        setMode('new')
+                        setError('')
+                    }}
                 >
-                    <button
-                        type="button"
-                        aria-pressed={mode === 'new'}
-                        onClick={() => {
-                            setMode('new')
-                            setError('')
-                        }}
-                    >
-                        Neu
-                    </button>
-
-                    <button
-                        type="button"
-                        aria-pressed={mode === 'catalog'}
-                        onClick={() => {
-                            setMode('catalog')
-                            setError('')
-                        }}
-                    >
-                        Aus Katalog
-                    </button>
-                </div>
-
-                {mode === 'new' ? (
-                    <>
-                        <div>
-                            <label htmlFor={nameId}>Name</label>
-
-                            <input
-                                id={nameId}
-                                autoFocus
-                                autoComplete="off"
-                                maxLength={120}
-                                value={name}
-                                onChange={(event) =>
-                                    setName(event.target.value)
-                                }
-                                required
-                            />
-                        </div>
-
-                        <PhotoPicker
-                            imageId={null}
-                            value={photo}
-                            name={name}
-                            onChange={(value) =>
-                                setPhoto(value ?? null)
-                            }
-                            onBusyChange={setPreparing}
-                        />
-                    </>
-                ) : (
-                    <CatalogProfilePicker
-                        items={available}
-                        value={itemId}
-                        disabled={pending || preparing}
-                        onChange={(id) => {
-                            setItemId(id)
-                            setError('')
-                        }}
-                    />
-                )}
-
-                {error && <p role="alert">{error}</p>}
+                    Neu
+                </button>
 
                 <button
-                    type="submit"
-                    disabled={
-                        pending ||
-                        preparing ||
-                        (mode === 'catalog' && !selected && !alreadyAdded)
-                    }
+                    type="button"
+                    aria-pressed={mode === 'catalog'}
+                    onClick={() => {
+                        setMode('catalog')
+                        setError('')
+                    }}
                 >
-                    {pending ? 'Speichern …' : 'Hinzufügen'}
+                    Aus Katalog
                 </button>
-            </form>
-        </Modal>
-    )
+            </div>
+
+            {mode === 'new' ? <>
+                <div>
+                    <label htmlFor={nameId}>Name</label>
+                    <input
+                        id={nameId}
+                        autoFocus
+                        autoComplete="off"
+                        maxLength={120}
+                        required
+                        value={name}
+                        onChange={(event) => setName(event.target.value)}
+                    />
+                </div>
+
+                <PhotoPicker
+                    imageId={null}
+                    value={photo}
+                    name={name}
+                    onChange={(value) => setPhoto(value ?? null)}
+                    onBusyChange={setPreparingPhoto}
+                />
+
+                <PhotoPicker
+                    kind="background"
+                    imageId={null}
+                    value={background}
+                    name={name}
+                    onChange={(value) => setBackground(value ?? null)}
+                    onBusyChange={setPreparingBackground}
+                />
+            </> : <CatalogProfilePicker
+                items={available}
+                value={itemId}
+                disabled={pending || preparing}
+                onChange={(id) => {
+                    setItemId(id)
+                    setError('')
+                }}
+            />}
+
+            {error && <p role="alert">{error}</p>}
+
+            <button
+                type="submit"
+                disabled={
+                    pending ||
+                    preparing ||
+                    (mode === 'catalog' && !selected)
+                }
+            >
+                {pending ? 'Speichern …' : 'Hinzufügen'}
+            </button>
+        </form>
+    </Modal>
 }

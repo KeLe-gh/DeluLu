@@ -14,9 +14,13 @@ export type TierEntryDraft = {
     itemId: string
 } & (
     | { source: 'catalog' }
-    | { source: 'new'; name: string; photo: Blob | null }
+    | {
+    source: 'new'
+    name: string
+    photo: Blob | null
+    background?: Blob | null
+}
     )
-
 export interface AddTierEntryInput {
     id: string
     listId: string

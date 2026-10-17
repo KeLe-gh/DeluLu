@@ -8,6 +8,7 @@ import { CreateRankingEntryDialog } from '../components/CreateRankingEntryDialog
 import { RankingEntryEditor } from '../components/RankingEntryEditor'
 import { SortableRankingEntries } from '../components/SortableRankingEntries'
 import { getRankingSize } from '../model/ranking.operations'
+import { RankingShareButton } from '../components/RankingShareButton'
 
 interface RankingDetailPageProps {
     list: RankingList
@@ -25,6 +26,7 @@ interface RankingDetailPageProps {
         name: string,
         position: number,
         photo?: Blob | null,
+        background?: Blob | null,
     ) => Promise<boolean>
     onAddExistingEntry: (
         itemId: ItemId,
@@ -37,7 +39,9 @@ interface RankingDetailPageProps {
         photo?: Blob | null,
         background?: Blob | null,
     ) => Promise<boolean>
-    onRemoveEntry: (entryId: EntryId) => Promise<boolean>
+    onRemoveEntry: (
+        entryId: EntryId,
+    ) => Promise<boolean>
     onReorderEntry: (
         entryId: EntryId,
         toIndex: number,
@@ -80,6 +84,11 @@ export function RankingDetailPage({
                     {size === 0 ? 'Leer' : 'Top ' + size}
                 </span>
             </div>
+
+            <RankingShareButton
+                key={list.id}
+                listId={list.id}
+            />
 
             {createOpen && (
                 <CreateRankingEntryDialog
