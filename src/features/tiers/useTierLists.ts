@@ -4,6 +4,7 @@ import type { ProfileImageStore } from '../images/model/profileImageStore'
 import type { TierList } from '../../shared/types/list.types'
 import type { Versioned } from '../../shared/types/persistence.types'
 import { RevisionConflictError } from '../../shared/errors/persistence.errors'
+import { moveTierEntry, sameTierOrder } from './tier.repository'
 import type {
     AddTierEntryInput,
     CreateTierListInput,
@@ -92,16 +93,11 @@ export function useTierLists(
                 blocked.current = false
 
                 void imageStore.cleanupUnused().catch((cause) => {
-                    console.warn(
-                        '[deluLu] Photo cleanup failed:',
-                        cause,
-                    )
+                    console.warn('[deluLu] Photo cleanup failed:', cause)
                 })
             } catch {
                 if (current === generation.current) {
-                    setError(
-                        'Die Tierlisten konnten nicht geladen werden.',
-                    )
+                    setError('Die Tierlisten konnten nicht geladen werden.')
                     setNeedsReload(true)
                     blocked.current = true
                 }
@@ -203,14 +199,8 @@ export function useTierLists(
             if (current !== generation.current) return false
 
             accept({
-                lists: upsert(
-                    recordsRef.current.lists,
-                    result.list,
-                ),
-                items: upsert(
-                    recordsRef.current.items,
-                    result.item,
-                ),
+                lists: upsert(recordsRef.current.lists, result.list),
+                items: upsert(recordsRef.current.items, result.item),
             })
 
             return true
@@ -219,10 +209,7 @@ export function useTierLists(
             if (!attempted) throw cause
 
             try {
-                const recovered = await readRecords(
-                    repository,
-                    catalog,
-                )
+                const recovered = await readRecords(repository, catalog)
 
                 if (current !== generation.current) return false
 
@@ -261,6 +248,98 @@ export function useTierLists(
         }
     }
 
+    async function moveEntry(
+        listId: string,
+        entryId: string,
+        tierId: string | null,
+        index: number,
+    ) {
+        if (busy.current || blocked.current) return
+
+        const stored = recordsRef.current.lists.find(
+            (list) => list.value.id === listId,
+        )
+
+        if (!stored) return
+
+        const moved = moveTierEntry(
+            stored.value,
+            entryId,
+            tierId,
+            index,
+        )
+
+        if (sameTierOrder(stored.value, moved)) return
+
+        busy.current = true
+        setIsSaving(true)
+        setError('')
+
+        const current = generation.current
+
+        accept({
+            ...recordsRef.current,
+            lists: upsert(recordsRef.current.lists, {
+                ...stored,
+                value: moved,
+            }),
+        })
+
+        try {
+            const saved = await repository.moveEntry({
+                listId,
+                entryId,
+                tierId,
+                index,
+                expectedRevision: stored.revision,
+            })
+
+            if (current !== generation.current) return
+
+            accept({
+                ...recordsRef.current,
+                lists: upsert(recordsRef.current.lists, saved),
+            })
+        } catch (cause) {
+            if (current !== generation.current) return
+
+            try {
+                const recovered = await readRecords(repository, catalog)
+
+                if (current !== generation.current) return
+
+                accept(recovered)
+
+                const saved = recovered.lists.find(
+                    (list) => list.value.id === listId,
+                )
+
+                if (saved && sameTierOrder(saved.value, moved)) return
+            } catch {
+                if (current !== generation.current) return
+
+                accept({
+                    ...recordsRef.current,
+                    lists: upsert(recordsRef.current.lists, stored),
+                })
+            }
+
+            setError(
+                cause instanceof RevisionConflictError
+                    ? 'Die Tierliste wurde inzwischen geändert. Bitte lade den aktuellen Stand.'
+                    : 'Die Verschiebung konnte nicht bestätigt werden. Bitte lade den aktuellen Stand.',
+            )
+
+            blocked.current = true
+            setNeedsReload(true)
+        } finally {
+            if (current === generation.current) {
+                busy.current = false
+                setIsSaving(false)
+            }
+        }
+    }
+
     return {
         lists: records.lists.map((record) => record.value),
         items: records.items.map((record) => record.value),
@@ -272,5 +351,6 @@ export function useTierLists(
         reload,
         create,
         addEntry,
+        moveEntry,
     }
 }

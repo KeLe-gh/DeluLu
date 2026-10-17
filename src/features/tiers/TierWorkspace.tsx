@@ -2,13 +2,12 @@ import { useState } from 'react'
 import type { CatalogRepository } from '../catalog'
 import type { ProfileImageStore } from '../images/model/profileImageStore'
 import { ModalFeedbackContext } from '../../shared/components/ModalFeedbackContext'
-import { AddTierEntryDialog } from './AddTierEntryDialog'
-import { TierEntryPool } from './TierEntryPool'
 import { AppHeader } from '../../app/AppHeader'
+import { AddTierEntryDialog } from './AddTierEntryDialog'
+import { CreateTierListDialog } from './CreateTierListDialog'
+import { TierBoard } from './TierBoard'
 import type { TierRepository } from './tier.repository'
 import { useTierLists } from './useTierLists'
-import { TierBoard } from './TierBoard'
-import { CreateTierListDialog } from './CreateTierListDialog'
 import './Tiers.css'
 
 export default function TierWorkspace({
@@ -64,11 +63,13 @@ export default function TierWorkspace({
     ) : null
 
     return (
-        <ModalFeedbackContext.Provider value={{
-            busy,
-            blocked: busy || state.needsReload,
-            content: feedback,
-        }}>
+        <ModalFeedbackContext.Provider
+            value={{
+                busy,
+                blocked: busy || state.needsReload,
+                content: feedback,
+            }}
+        >
             <div className="app-shell">
                 <AppHeader
                     onHome={() => onNavigate('/')}
@@ -157,19 +158,23 @@ export default function TierWorkspace({
                                     <h1>{list.title}</h1>
                                 </div>
 
-                                <TierBoard tiers={list.tiers} />
-
-                                <section
-                                    className="tier-unassigned"
-                                    aria-label="Nicht zugeordnet"
-                                >
-                                    <h2>Nicht zugeordnet</h2>
-
-                                    <TierEntryPool
-                                        entries={list.entries}
-                                        items={state.items}
-                                    />
-                                </section>
+                                <TierBoard
+                                    list={list}
+                                    items={state.items}
+                                    disabled={
+                                        busy ||
+                                        state.needsReload ||
+                                        addOpen
+                                    }
+                                    onMove={(entryId, tierId, index) =>
+                                        state.moveEntry(
+                                            list.id,
+                                            entryId,
+                                            tierId,
+                                            index,
+                                        )
+                                    }
+                                />
                             </>
                         ) : (
                             <>

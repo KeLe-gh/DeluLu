@@ -125,3 +125,77 @@
 .tier-tile .profile-photo {
     border-radius: 4px;
 }
+.tier-drop-zone {
+    display: flex;
+    flex-wrap: wrap;
+    align-content: flex-start;
+    align-items: flex-start;
+    gap: 4px;
+    padding: 4px;
+}
+
+.tier-pool.tier-drop-zone {
+    gap: 8px;
+    padding: 12px;
+}
+
+.tier-drop-active {
+    box-shadow: inset 0 0 0 2px var(--accent);
+}
+
+.tier-drag-tile {
+    position: relative;
+    display: block;
+    flex: 0 0 48px;
+    width: 48px;
+    height: 48px;
+    padding: 0;
+    border: 0;
+    border-radius: 4px;
+    background: transparent;
+    touch-action: none;
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-touch-callout: none;
+    cursor: grab;
+}
+
+.tier-drag-tile[aria-pressed='true'] {
+    cursor: grabbing;
+}
+
+.tier-drag-tile[aria-disabled='true'] {
+    cursor: default;
+}
+
+.tier-drag-tile .profile-photo {
+    width: 100%;
+    height: 100%;
+    border-radius: inherit;
+}
+
+.tier-drag-tile:focus-visible {
+    outline: 3px solid var(--accent);
+    outline-offset: 2px;
+}
+
+.tier-insert-before::before,
+.tier-insert-after::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 3px;
+    border-radius: 2px;
+    background: var(--accent);
+    pointer-events: none;
+    z-index: 1;
+}
+
+.tier-insert-before::before {
+    left: -3px;
+}
+
+.tier-insert-after::after {
+    right: -3px;
+}

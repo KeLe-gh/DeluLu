@@ -63,8 +63,13 @@ function readTiers(listId?: string) {
             .order('id')
             .limit(pageSize)
 
-        if (listId) query = query.eq('list_id', listId)
-        if (afterId) query = query.gt('id', afterId)
+        if (listId) {
+            query = query.eq('list_id', listId)
+        }
+
+        if (afterId) {
+            query = query.gt('id', afterId)
+        }
 
         return query
     })
@@ -78,8 +83,13 @@ function readEntries(listId?: string) {
             .order('id')
             .limit(pageSize)
 
-        if (listId) query = query.eq('list_id', listId)
-        if (afterId) query = query.gt('id', afterId)
+        if (listId) {
+            query = query.eq('list_id', listId)
+        }
+
+        if (afterId) {
+            query = query.gt('id', afterId)
+        }
 
         return query
     })
@@ -145,9 +155,36 @@ export const supabaseTierRepository: TierRepository = {
         return readList(data)
     },
 
-    async addEntry(input) {
+    async moveEntry(input) {
         const { data, error } = await supabase
-            .rpc('add_tier_entry', {
+            .rpc('move_tier_entry', {
+                p_list_id: input.listId,
+                p_entry_id: input.entryId,
+                p_tier_id: input.tierId,
+                p_index: input.index,
+                p_expected_revision: input.expectedRevision,
+            })
+            .single()
+
+        if (error?.code === 'PT409') {
+            throw new RevisionConflictError()
+        }
+
+        if (error) throw error
+
+        if (!data) {
+            throw new Error(
+                'Die Verschiebung konnte nicht gespeichert werden.',
+            )
+        }
+
+        return readList(data)
+    },
+
+    async addEntry(input) {
+        const { data, error } = await supabase.rpc(
+            'add_tier_entry',
+            {
                 p_id: input.id,
                 p_list_id: input.listId,
                 p_item_id: input.itemId,
@@ -155,7 +192,8 @@ export const supabaseTierRepository: TierRepository = {
                 p_new_name: input.newProfile?.name,
                 p_profile_image_id:
                     input.newProfile?.profileImageId ?? undefined,
-            })
+            },
+        )
 
         if (
             error?.code === 'PT409' ||
