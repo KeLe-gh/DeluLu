@@ -10,6 +10,8 @@ import type {
     MediaThoughtRepository,
 } from './mediaThought.types'
 import { useMediaThoughts } from './useMediaThoughts'
+import { orderedMedia } from './mediaOrder'
+import { SortableMediaItems } from './SortableMediaItems'
 import { MediaThoughtDialog } from './MediaThoughtDialog'
 
 export function MediaThoughts({
@@ -34,11 +36,7 @@ export function MediaThoughts({
 
     const busy = workspace.loading || workspace.saving
     const blocked = busy || workspace.needsReload
-
-    const thoughts = [...workspace.thoughts].sort((a, b) =>
-        b.createdAt.localeCompare(a.createdAt) ||
-        a.id.localeCompare(b.id),
-    )
+    const thoughts = orderedMedia(workspace.thoughts)
 
     const feedback =
         busy || workspace.error || workspace.needsReload ? (
@@ -110,53 +108,56 @@ export function MediaThoughts({
 
                     {!workspace.loading && !workspace.needsReload && (
                         thoughts.length ? (
-                            <ul className="thought-list">
-                                {thoughts.map((thought) => (
-                                    <li key={thought.id}>
-                                        <article className="thought-card">
-                                            {thought.heading && (
-                                                <h3>{thought.heading}</h3>
-                                            )}
+                            <SortableMediaItems
+                                items={thoughts}
+                                className="thought-list"
+                                onReorder={workspace.reorder}
+                                render={(thought, _index, handle) => (
+                                    <article className="thought-card">
+                                        {thought.heading && (
+                                            <h3>{thought.heading}</h3>
+                                        )}
 
-                                            <time dateTime={thought.createdAt}>
-                                                {new Date(
-                                                    thought.createdAt,
-                                                ).toLocaleString('de-CH', {
-                                                    day: '2-digit',
-                                                    month: '2-digit',
-                                                    year: 'numeric',
-                                                    hour: '2-digit',
-                                                    minute: '2-digit',
-                                                })}
-                                            </time>
+                                        <time dateTime={thought.createdAt}>
+                                            {new Date(
+                                                thought.createdAt,
+                                            ).toLocaleString('de-CH', {
+                                                day: '2-digit',
+                                                month: '2-digit',
+                                                year: 'numeric',
+                                                hour: '2-digit',
+                                                minute: '2-digit',
+                                            })}
+                                        </time>
 
-                                            <p className="thought-body">
-                                                {thought.body}
-                                            </p>
+                                        <p className="thought-body">
+                                            {thought.body}
+                                        </p>
 
-                                            <div className="thought-actions">
-                                                <button
-                                                    type="button"
-                                                    onClick={() =>
-                                                        setEditor({ thought })
-                                                    }
-                                                >
-                                                    Bearbeiten
-                                                </button>
+                                        <div className="thought-actions">
+                                            {handle}
 
-                                                <button
-                                                    type="button"
-                                                    onClick={() =>
-                                                        setDeleting(thought)
-                                                    }
-                                                >
-                                                    Löschen
-                                                </button>
-                                            </div>
-                                        </article>
-                                    </li>
-                                ))}
-                            </ul>
+                                            <button
+                                                type="button"
+                                                onClick={() =>
+                                                    setEditor({ thought })
+                                                }
+                                            >
+                                                Bearbeiten
+                                            </button>
+
+                                            <button
+                                                type="button"
+                                                onClick={() =>
+                                                    setDeleting(thought)
+                                                }
+                                            >
+                                                Löschen
+                                            </button>
+                                        </div>
+                                    </article>
+                                )}
+                            />
                         ) : (
                             <div className="empty-state">
                                 <p>Noch keine Gedanken.</p>

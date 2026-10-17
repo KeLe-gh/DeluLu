@@ -216,3 +216,56 @@
     background: #b42338;
     color: #fff;
 }
+.media-title__number {
+    flex-shrink: 0;
+    min-width: 22px;
+    color: var(--muted);
+    font-variant-numeric: tabular-nums;
+}
+
+.media-drag {
+    display: grid;
+    place-items: center;
+    flex: 0 0 32px;
+    min-width: 32px;
+    min-height: 48px;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: var(--muted);
+    font-size: 1.5rem;
+    touch-action: none;
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-touch-callout: none;
+    cursor: grab;
+}
+
+.media-drag:active {
+    cursor: grabbing;
+}
+
+.media-item--dragging {
+    position: relative;
+    z-index: 25;
+    opacity: 0.85;
+}
+
+.thought-actions > .media-drag {
+    margin-right: auto;
+    padding: 0;
+    border: 0;
+    font-size: 1.5rem;
+}
+
+.modal button.media-delete-link {
+    width: 100%;
+    margin-top: 12px;
+    color: #b42338;
+}
+
+@media (prefers-color-scheme: dark) {
+    .modal button.media-delete-link {
+        color: #ff9eaf;
+    }
+}

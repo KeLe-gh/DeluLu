@@ -32,6 +32,44 @@ export type TierEntryRow = {
 export type AppDatabase = Omit<Database, 'public'> & {
     public: Omit<Database['public'], 'Tables' | 'Functions'> & {
         Functions: Database['public']['Functions'] & {
+            delete_media_title: {
+                Args: {
+                    p_id: string
+                    p_expected_revision: number
+                }
+                Returns: boolean
+            }
+
+            reorder_media_titles: {
+                Args: {
+                    p_status: string
+                    p_items: import('./database.types').Json
+                }
+                Returns:
+                    AppDatabase['public']['Tables']['media_titles']['Row'][]
+                SetofOptions: {
+                    from: '*'
+                    to: 'media_titles'
+                    isOneToOne: false
+                    isSetofReturn: true
+                }
+            }
+
+            reorder_media_thoughts: {
+                Args: {
+                    p_title_id: string
+                    p_items: import('./database.types').Json
+                }
+                Returns:
+                    AppDatabase['public']['Tables']['media_thoughts']['Row'][]
+                SetofOptions: {
+                    from: '*'
+                    to: 'media_thoughts'
+                    isOneToOne: false
+                    isSetofReturn: true
+                }
+            }
+
             rename_tier_list: {
                 Args: {
                     p_id: string
@@ -115,6 +153,7 @@ export type AppDatabase = Omit<Database, 'public'> & {
         Tables: Database['public']['Tables'] & {
             media_thoughts: {
                 Row: {
+                    sort_order: number
                     id: string
                     owner_id: string
                     title_id: string
@@ -139,6 +178,7 @@ export type AppDatabase = Omit<Database, 'public'> & {
 
             media_titles: {
                 Row: {
+                    sort_order: number
                     id: string
                     owner_id: string
                     name: string

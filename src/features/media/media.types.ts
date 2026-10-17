@@ -24,12 +24,18 @@ export interface MediaDraft {
 }
 
 export interface MediaTitle extends MediaDraft {
+    sortOrder: number
     revision: number
     createdAt: string
     updatedAt: string
 }
 
 export interface MediaRepository {
+    reorder: (
+        status: MediaStatus,
+        items: readonly MediaTitle[],
+    ) => Promise<MediaTitle[]>
+    remove: (title: MediaTitle) => Promise<void>
     getAll: () => Promise<MediaTitle[]>
     save: (
         draft: MediaDraft,

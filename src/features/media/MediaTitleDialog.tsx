@@ -15,6 +15,7 @@ export function MediaTitleDialog({
                                      title,
                                      status,
                                      onSave,
+                                     onDelete,
                                      onClose,
                                  }: {
     title?: MediaTitle
@@ -23,6 +24,7 @@ export function MediaTitleDialog({
         draft: MediaDraft,
         revision: number | null,
     ) => Promise<boolean>
+    onDelete?: (title: MediaTitle) => Promise<boolean>
     onClose: () => void
 }) {
     const prefix = useId()
@@ -47,6 +49,7 @@ export function MediaTitleDialog({
 
     const [pending, setPending] = useState(false)
     const [error, setError] = useState('')
+    const [confirmDelete, setConfirmDelete] = useState(false)
     const pendingRef = useRef(false)
 
     async function submit() {
@@ -96,6 +99,57 @@ export function MediaTitleDialog({
         }
     }
 
+    if (confirmDelete && title && onDelete) {
+        return (
+            <Modal
+                title="Eintrag löschen?"
+                busy={pending}
+                onClose={() => setConfirmDelete(false)}
+            >
+                <p>
+                    «{title.name}» und alle zugehörigen Gedanken
+                    werden endgültig gelöscht.
+                </p>
+
+                <form onSubmit={(event) => {
+                    event.preventDefault()
+
+                    if (pendingRef.current) return
+
+                    pendingRef.current = true
+                    setPending(true)
+                    setError('')
+
+                    void onDelete(title)
+                        .then((removed) => {
+                            if (removed) onClose()
+                        })
+                        .catch(() => {
+                            setError(
+                                'Der Eintrag konnte nicht gelöscht werden.',
+                            )
+                        })
+                        .finally(() => {
+                            pendingRef.current = false
+                            setPending(false)
+                        })
+                }}>
+                    {error && <p role="alert">{error}</p>}
+
+                    <button
+                        type="submit"
+                        className="media-delete"
+                        disabled={pending}
+                    >
+                        {pending
+                            ? 'Löschen …'
+                            : 'Eintrag und Gedanken löschen'}
+                    </button>
+                </form>
+            </Modal>
+        )
+    }
+
     return (
         <Modal
             title={
@@ -111,9 +165,7 @@ export function MediaTitleDialog({
                 void submit()
             }}>
                 <div>
-                    <label htmlFor={prefix + '-name'}>
-                        Name
-                    </label>
+                    <label htmlFor={prefix + '-name'}>Name</label>
 
                     <input
                         id={prefix + '-name'}
@@ -129,9 +181,7 @@ export function MediaTitleDialog({
                 </div>
 
                 <div>
-                    <label htmlFor={prefix + '-kind'}>
-                        Typ
-                    </label>
+                    <label htmlFor={prefix + '-kind'}>Typ</label>
 
                     <select
                         id={prefix + '-kind'}
@@ -193,6 +243,20 @@ export function MediaTitleDialog({
                             : 'Hinzufügen'}
                 </button>
             </form>
+
+            {title && onDelete && (
+                <button
+                    type="button"
+                    className="media-delete-link"
+                    disabled={pending}
+                    onClick={() => {
+                        setError('')
+                        setConfirmDelete(true)
+                    }}
+                >
+                    Eintrag löschen
+                </button>
+            )}
         </Modal>
     )
 }

@@ -16,6 +16,7 @@ function mapThought(row: ThoughtRow): MediaThought {
         titleId: row.title_id,
         heading: row.heading,
         body: row.body,
+        sortOrder: row.sort_order,
         revision: row.revision,
         createdAt: row.created_at,
         updatedAt: row.updated_at,
@@ -23,6 +24,37 @@ function mapThought(row: ThoughtRow): MediaThought {
 }
 
 export const supabaseMediaThoughtRepository: MediaThoughtRepository = {
+    async reorder(titleId, items) {
+        const { data, error } = await supabase.rpc(
+            'reorder_media_thoughts',
+            {
+                p_title_id: titleId,
+                p_items: items.map((item) => ({
+                    id: item.id,
+                    revision: item.revision,
+                })),
+            },
+        )
+
+        if (error?.code === 'PT409') {
+            throw new RevisionConflictError()
+        }
+
+        if (error) throw error
+
+        if (data === null) {
+            throw new Error(
+                'Die Reihenfolge konnte nicht gespeichert werden.',
+            )
+        }
+
+        if (data.length !== items.length) {
+            return supabaseMediaThoughtRepository.getAll(titleId)
+        }
+
+        return data.map(mapThought)
+    },
+
     async getAll(titleId) {
         const rows = await readAllRows<ThoughtRow>((afterId, size) => {
             let query = supabase

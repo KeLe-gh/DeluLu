@@ -6,12 +6,17 @@ export interface MediaThoughtDraft {
 }
 
 export interface MediaThought extends MediaThoughtDraft {
+    sortOrder: number
     revision: number
     createdAt: string
     updatedAt: string
 }
 
 export interface MediaThoughtRepository {
+    reorder: (
+        titleId: string,
+        items: readonly MediaThought[],
+    ) => Promise<MediaThought[]>
     getAll: (titleId: string) => Promise<MediaThought[]>
     save: (
         draft: MediaThoughtDraft,

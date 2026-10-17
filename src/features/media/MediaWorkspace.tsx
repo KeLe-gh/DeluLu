@@ -3,6 +3,8 @@ import { AppHeader } from '../../app/AppHeader'
 import { useAppNavigation } from '../../app/hooks/useAppNavigation'
 import { supabaseMediaRepository } from '../../infrastructure/supabase/supabaseMediaRepository'
 import { ModalFeedbackContext } from '../../shared/components/ModalFeedbackContext'
+import { orderedMedia } from './mediaOrder'
+import { SortableMediaItems } from './SortableMediaItems'
 import { MediaTitleDialog } from './MediaTitleDialog'
 import { MediaThoughts } from './MediaThoughts'
 import { MediaSwipeRow } from './MediaSwipeRow'
@@ -50,12 +52,9 @@ export function MediaScreen({
     const busy = workspace.loading || workspace.saving
     const blocked = busy || workspace.needsReload
 
-    const titles = workspace.titles
-        .filter((title) => title.status === status)
-        .sort((a, b) =>
-            b.createdAt.localeCompare(a.createdAt) ||
-            a.id.localeCompare(b.id),
-        )
+    const titles = orderedMedia(
+        workspace.titles.filter((title) => title.status === status),
+    )
 
     const feedback =
         busy || workspace.error || workspace.needsReload ? (
@@ -143,7 +142,6 @@ export function MediaScreen({
                                         onBack('/media/' + status)
                                     }
                                 />
-
                                 <main className="page">
                                     <h1>Eintrag nicht verfügbar</h1>
                                 </main>
@@ -204,63 +202,70 @@ export function MediaScreen({
 
                         {workspace.loaded && (
                             titles.length ? (
-                                <ul className="media-titles">
-                                    {titles.map((title) => (
-                                        <li key={title.id}>
-                                            <MediaSwipeRow
-                                                name={title.name}
-                                                actions={actions(title)}
+                                <SortableMediaItems
+                                    key={status}
+                                    items={titles}
+                                    className="media-titles"
+                                    onReorder={(id, index) =>
+                                        workspace.reorder(status, id, index)
+                                    }
+                                    render={(title, index, handle) => (
+                                        <MediaSwipeRow
+                                            name={title.name}
+                                            actions={actions(title)}
+                                        >
+                                            <button
+                                                type="button"
+                                                className="media-title"
+                                                aria-label={title.name + ' öffnen'}
+                                                onClick={() =>
+                                                    onNavigate(
+                                                        '/media/' + status + '/' + title.id,
+                                                    )
+                                                }
                                             >
-                                                <button
-                                                    type="button"
-                                                    className="media-title"
-                                                    aria-label={
-                                                        title.name + ' öffnen'
-                                                    }
-                                                    onClick={() =>
-                                                        onNavigate(
-                                                            '/media/' +
-                                                            status +
-                                                            '/' +
-                                                            title.id,
-                                                        )
-                                                    }
-                                                >
-                                                    <div className="media-title__text">
-                                                        <strong>
-                                                            {title.name}
-                                                        </strong>
+                                                {status === 'watchlist' && (
+                                                    <span
+                                                        className="media-title__number"
+                                                        aria-hidden="true"
+                                                    >
+                                                        {index + 1}.
+                                                    </span>
+                                                )}
 
-                                                        <span>
-                                                            {title.kind === 'movie'
-                                                                ? 'Film'
-                                                                : 'Serie'}
-                                                        </span>
-                                                    </div>
+                                                <span className="media-title__text">
+                                                    <strong>{title.name}</strong>
+                                                    <span>
+                                                        {title.kind === 'movie'
+                                                            ? 'Film'
+                                                            : 'Serie'}
+                                                    </span>
+                                                </span>
 
-                                                    {title.rating !== null && (
-                                                        <span
-                                                            className="media-title__rating"
-                                                            aria-label={
-                                                                'Bewertung: ' +
-                                                                title.rating +
-                                                                ' von 10'
-                                                            }
-                                                        >
-                                                            {title.rating.toLocaleString(
-                                                                'de-CH',
-                                                                {
-                                                                    maximumFractionDigits: 1,
-                                                                },
-                                                            )}
-                                                            <small>/10</small>
-                                                        </span>
-                                                    )}
-                                                </button>
-                                            </MediaSwipeRow>
-                                        </li>
-                                    ))}
-                                </ul>
+                                                {title.rating !== null && (
+                                                    <span
+                                                        className="media-title__rating"
+                                                        aria-label={
+                                                            'Bewertung: ' +
+                                                            title.rating +
+                                                            ' von 10'
+                                                        }
+                                                    >
+                                                        {title.rating.toLocaleString(
+                                                            'de-CH',
+                                                            {
+                                                                maximumFractionDigits: 1,
+                                                            },
+                                                        )}
+                                                        <small>/10</small>
+                                                    </span>
+                                                )}
+                                            </button>
+
+                                            {handle}
+                                        </MediaSwipeRow>
+                                    )}
+                                />
                             ) : (
                                 <div className="empty-state">
                                     <p>Noch keine Einträge.</p>
@@ -275,6 +280,7 @@ export function MediaScreen({
                         title={dialog.title}
                         status={dialog.status}
                         onSave={workspace.save}
+                        onDelete={workspace.remove}
                         onClose={() => setDialog(null)}
                     />
                 )}

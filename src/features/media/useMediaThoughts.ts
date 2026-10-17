@@ -6,6 +6,7 @@ import type {
     MediaThoughtRepository,
 } from './mediaThought.types'
 import { sameThought } from './mediaThought.types'
+import { moveMedia, sameMediaOrder } from './mediaOrder'
 
 export function useMediaThoughts(
     titleId: string,
@@ -155,6 +156,26 @@ export function useMediaThoughts(
         )
     }
 
+    function reorder(id: string, index: number) {
+        const desired = moveMedia(thoughts, id, index)
+
+        if (sameMediaOrder(thoughts, desired)) {
+            return Promise.resolve(true)
+        }
+
+        return mutate(
+            async () => {
+                const saved = await repository.reorder(
+                    titleId,
+                    desired,
+                )
+
+                return () => saved
+            },
+            (rows) => sameMediaOrder(rows, desired),
+        )
+    }
+
     return {
         thoughts,
         loading,
@@ -164,5 +185,6 @@ export function useMediaThoughts(
         reload,
         save,
         remove,
+        reorder,
     }
 }

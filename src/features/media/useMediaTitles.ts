@@ -3,9 +3,11 @@ import { RevisionConflictError } from '../../shared/errors/persistence.errors'
 import type {
     MediaDraft,
     MediaRepository,
+    MediaStatus,
     MediaTitle,
 } from './media.types'
 import { sameMediaTitle } from './media.types'
+import { moveMedia, sameMediaOrder } from './mediaOrder'
 
 export function useMediaTitles(repository: MediaRepository) {
     const [titles, setTitles] = useState<MediaTitle[]>([])
@@ -16,7 +18,7 @@ export function useMediaTitles(repository: MediaRepository) {
     const [needsReload, setNeedsReload] = useState(false)
     const [request, setRequest] = useState(0)
 
-    const savingRef = useRef(false)
+    const busy = useRef(false)
     const generation = useRef(0)
 
     useEffect(() => {
@@ -54,42 +56,40 @@ export function useMediaTitles(repository: MediaRepository) {
     }, [repository, request])
 
     function reload() {
-        if (loading || savingRef.current) return
+        if (loading || busy.current) return
 
         setLoading(true)
         setError('')
         setRequest((value) => value + 1)
     }
 
-    async function save(
-        draft: MediaDraft,
-        revision: number | null,
+    async function mutate(
+        operation: () => Promise<
+            (rows: MediaTitle[]) => MediaTitle[]
+        >,
+        confirmed: (rows: MediaTitle[]) => boolean,
     ) {
-        if (savingRef.current || loading || needsReload) {
+        if (loading || needsReload || busy.current) {
             return false
         }
 
-        savingRef.current = true
+        const run = generation.current
+
+        busy.current = true
         setSaving(true)
         setError('')
 
-        const run = generation.current
-
         try {
-            const saved = await repository.save(draft, revision)
+            const accept = await operation()
 
             if (run !== generation.current) return false
 
-            setTitles((rows) => [
-                ...rows.filter((row) => row.id !== saved.id),
-                saved,
-            ])
-
+            setTitles(accept)
             return true
         } catch (cause) {
             if (run !== generation.current) return false
 
-            console.error('[deluLu] Media save failed:', cause)
+            console.error('[deluLu] Media change failed:', cause)
 
             try {
                 const rows = await repository.getAll()
@@ -98,13 +98,7 @@ export function useMediaTitles(repository: MediaRepository) {
 
                 setTitles(rows)
 
-                const current = rows.find(
-                    (row) => row.id === draft.id,
-                )
-
-                if (current && sameMediaTitle(current, draft)) {
-                    return true
-                }
+                if (confirmed(rows)) return true
             } catch {
                 if (run !== generation.current) return false
 
@@ -113,18 +107,82 @@ export function useMediaTitles(repository: MediaRepository) {
 
             setError(
                 cause instanceof RevisionConflictError
-                    ? 'Der Eintrag wurde inzwischen geändert. Bitte schliesse das Popup und öffne ihn erneut.'
-                    : 'Speichern fehlgeschlagen. Deine Eingaben bleiben erhalten.',
+                    ? 'Die Daten wurden inzwischen geändert. Bitte prüfe den aktuellen Stand und öffne ein bereits offenes Popup erneut.'
+                    : 'Die Änderung konnte nicht bestätigt werden. Deine Eingaben bleiben erhalten.',
             )
 
             return false
         } finally {
-            savingRef.current = false
+            busy.current = false
 
             if (run === generation.current) {
                 setSaving(false)
             }
         }
+    }
+
+    function save(
+        draft: MediaDraft,
+        revision: number | null,
+    ) {
+        return mutate(
+            async () => {
+                const saved = await repository.save(draft, revision)
+
+                return (rows) => [
+                    ...rows.filter((row) => row.id !== saved.id),
+                    saved,
+                ]
+            },
+            (rows) =>
+                rows.some((row) => sameMediaTitle(row, draft)),
+        )
+    }
+
+    function remove(title: MediaTitle) {
+        return mutate(
+            async () => {
+                await repository.remove(title)
+
+                return (rows) =>
+                    rows.filter((row) => row.id !== title.id)
+            },
+            (rows) =>
+                !rows.some((row) => row.id === title.id),
+        )
+    }
+
+    function reorder(
+        status: MediaStatus,
+        id: string,
+        index: number,
+    ) {
+        const current = titles.filter(
+            (row) => row.status === status,
+        )
+        const desired = moveMedia(current, id, index)
+
+        if (sameMediaOrder(current, desired)) {
+            return Promise.resolve(true)
+        }
+
+        return mutate(
+            async () => {
+                const saved = await repository.reorder(
+                    status,
+                    desired,
+                )
+
+                return (rows) => [
+                    ...rows.filter((row) => row.status !== status),
+                    ...saved,
+                ]
+            },
+            (rows) => sameMediaOrder(
+                rows.filter((row) => row.status === status),
+                desired,
+            ),
+        )
     }
 
     return {
@@ -136,5 +194,7 @@ export function useMediaTitles(repository: MediaRepository) {
         needsReload,
         reload,
         save,
+        remove,
+        reorder,
     }
 }
