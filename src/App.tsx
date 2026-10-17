@@ -1,4 +1,5 @@
-import { useState } from 'react'
+import { lazy, Suspense, useState } from 'react'
+import { AppHeader } from './app/AppHeader'
 import { HomePage } from './app/HomePage'
 import { useAppNavigation } from './app/hooks/useAppNavigation'
 import { useRankingWorkspace } from './app/hooks/useRankingWorkspace'
@@ -14,8 +15,13 @@ import { supabaseCatalogRepository } from './infrastructure/supabase/supabaseCat
 import { supabaseProfileImageStore } from './infrastructure/supabase/supabaseProfileImageStore'
 import { supabaseRankingRepository } from './infrastructure/supabase/supabaseRankingRepository'
 import { supabaseRankingEditorRepository } from './infrastructure/supabase/supabaseRankingEditorRepository'
+import { supabaseTierRepository } from './infrastructure/supabase/supabaseTierRepository'
 import { ModalFeedbackContext } from './shared/components/ModalFeedbackContext'
 import './App.css'
+
+const TierWorkspace = lazy(
+    () => import('./features/tiers/TierWorkspace'),
+)
 
 type Workspace = ReturnType<typeof useRankingWorkspace>
 type Navigation = ReturnType<typeof useAppNavigation>
@@ -57,48 +63,12 @@ function WorkspaceScreen({
 
     return (
         <>
-            <header className="app-bar">
-                {parent ? (
-                    <button
-                        type="button"
-                        className="icon-button"
-                        aria-label="Zurück"
-                        title="Zurück"
-                        onClick={() => back(parent)}
-                    >
-                        <span aria-hidden="true">←</span>
-                    </button>
-                ) : (
-                    <span className="app-bar__spacer" />
-                )}
-
-                <button
-                    type="button"
-                    className="app-brand"
-                    aria-label="deluLu – Startseite"
-                    onClick={() => navigate('/')}
-                >
-                    deluLu <span aria-hidden="true">💜</span>
-                </button>
-
-                {canCreate ? (
-                    <button
-                        type="button"
-                        className="icon-button icon-button--add"
-                        aria-label={
-                            list ? 'Eintrag hinzufügen' : 'Liste erstellen'
-                        }
-                        title={
-                            list ? 'Eintrag hinzufügen' : 'Liste erstellen'
-                        }
-                        onClick={() => setCreateOpen(true)}
-                    >
-                        <span aria-hidden="true">+</span>
-                    </button>
-                ) : (
-                    <span className="app-bar__spacer" />
-                )}
-            </header>
+            <AppHeader
+                onHome={() => navigate('/')}
+                onBack={parent ? () => back(parent) : undefined}
+                onAdd={canCreate ? () => setCreateOpen(true) : undefined}
+                addLabel={list ? 'Eintrag hinzufügen' : 'Liste erstellen'}
+            />
 
             {path === '/' ? (
                 <HomePage
@@ -107,6 +77,7 @@ function WorkspaceScreen({
             ) : path === '/lists' ? (
                 <ListMenuPage
                     onOpenRankings={() => navigate('/rankings')}
+                    onOpenTiers={() => navigate('/tiers')}
                 />
             ) : path === '/rankings' ? (
                 <RankingsPage
@@ -173,7 +144,7 @@ function WorkspaceScreen({
     )
 }
 
-function DeluluApp() {
+function RankingApp() {
     const navigation = useAppNavigation()
 
     const workspace = useRankingWorkspace({
@@ -236,6 +207,34 @@ function DeluluApp() {
             </div>
         </ModalFeedbackContext.Provider>
     )
+}
+
+function DeluluApp() {
+    const navigation = useAppNavigation()
+
+    if (
+        navigation.path === '/tiers' ||
+        navigation.path.startsWith('/tiers/')
+    ) {
+        return (
+            <Suspense fallback={
+                          <main className="page">
+                              <p role="status">
+                                  Tierlisten werden geladen …
+                              </p>
+                          </main>
+                      }>
+                <TierWorkspace
+                    repository={supabaseTierRepository}
+                    path={navigation.path}
+                    onNavigate={navigation.navigate}
+                    onBack={navigation.back}
+                />
+            </Suspense>
+        )
+    }
+
+    return <RankingApp />
 }
 
 function App() {

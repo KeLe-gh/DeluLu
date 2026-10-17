@@ -47,6 +47,7 @@ export interface TierListEntry extends ListEntry {
 
 export interface TierList extends ListBase {
     kind: 'tier'
+    styleId: string
     tiers: Tier[]
     entries: TierListEntry[]
 }
