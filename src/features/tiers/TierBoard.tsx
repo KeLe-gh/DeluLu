@@ -28,19 +28,11 @@ const poolId = 'tier-pool'
 
 const sensors = [
     PointerSensor.configure({
-        activationConstraints: (event) =>
-            event.pointerType === 'touch'
-                ? [
-                    new PointerActivationConstraints.Delay({
-                        value: 180,
-                        tolerance: 8,
-                    }),
-                ]
-                : [
-                    new PointerActivationConstraints.Distance({
-                        value: 5,
-                    }),
-                ],
+        activationConstraints: [
+            new PointerActivationConstraints.Distance({
+                value: 5,
+            }),
+        ],
     }),
     KeyboardSensor.configure({
         keyboardCodes: {
