@@ -1,3 +1,5 @@
+import { useAppNavigation } from './hooks/useAppNavigation'
+
 interface HomePageProps {
     onOpenLists: () => void
     onOpenCatalog: () => void
@@ -7,6 +9,8 @@ export function HomePage({
                              onOpenLists,
                              onOpenCatalog,
                          }: HomePageProps) {
+    const { navigate } = useAppNavigation()
+
     return (
         <main className="page">
             <div className="page-heading">
@@ -61,7 +65,7 @@ export function HomePage({
                 <button
                     type="button"
                     className="feature-card"
-                    disabled
+                    onClick={() => navigate('/media/watchlist')}
                 >
                     <span
                         className="feature-card__icon"
@@ -70,8 +74,14 @@ export function HomePage({
                         ▻
                     </span>
 
-                    <span>Serien</span>
-                    <span className="badge">Bald</span>
+                    <span>Serien/Filme</span>
+
+                    <span
+                        className="feature-card__arrow"
+                        aria-hidden="true"
+                    >
+                        ›
+                    </span>
                 </button>
             </nav>
         </main>

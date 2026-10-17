@@ -214,8 +214,29 @@ function RankingApp() {
     )
 }
 
+const MediaWorkspace = lazy(
+    () => import('./features/media/MediaWorkspace'),
+)
+
 function DeluluApp() {
     const navigation = useAppNavigation()
+
+    if (
+        navigation.path === '/media' ||
+        navigation.path.startsWith('/media/')
+    ) {
+        return (
+            <Suspense fallback={
+                          <main className="page">
+                              <p role="status">
+                                  Serien und Filme werden geladen …
+                              </p>
+                          </main>
+                      }>
+                <MediaWorkspace />
+            </Suspense>
+        )
+    }
 
     if (navigation.path === '/catalog') {
         return (
@@ -241,7 +262,9 @@ function DeluluApp() {
         return (
             <Suspense fallback={
                           <main className="page">
-                              <p role="status">Tierlisten werden geladen …</p>
+                              <p role="status">
+                                  Tierlisten werden geladen …
+                              </p>
                           </main>
                       }>
                 <TierWorkspace

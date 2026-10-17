@@ -54,6 +54,7 @@ export type AppDatabase = Omit<Database, 'public'> & {
                 }
                 Returns: boolean
             }
+
             delete_catalog_item: {
                 Args: {
                     p_id: string
@@ -61,6 +62,7 @@ export type AppDatabase = Omit<Database, 'public'> & {
                 }
                 Returns: boolean
             }
+
             move_tier_entry: {
                 Args: {
                     p_list_id: string
@@ -111,6 +113,46 @@ export type AppDatabase = Omit<Database, 'public'> & {
         }
 
         Tables: Database['public']['Tables'] & {
+            media_titles: {
+                Row: {
+                    id: string
+                    owner_id: string
+                    name: string
+                    kind: 'series' | 'movie'
+                    status:
+                        | 'watchlist'
+                        | 'watching'
+                        | 'watched'
+                        | 'dropped'
+                    rating: number | null
+                    revision: number
+                    created_at: string
+                    updated_at: string
+                }
+                Insert: {
+                    id: string
+                    name: string
+                    kind: 'series' | 'movie'
+                    status:
+                        | 'watchlist'
+                        | 'watching'
+                        | 'watched'
+                        | 'dropped'
+                    rating?: number | null
+                }
+                Update: {
+                    name?: string
+                    kind?: 'series' | 'movie'
+                    status?:
+                        | 'watchlist'
+                        | 'watching'
+                        | 'watched'
+                        | 'dropped'
+                    rating?: number | null
+                }
+                Relationships: []
+            }
+
             tier_entries: {
                 Row: TierEntryRow
                 Insert: {
