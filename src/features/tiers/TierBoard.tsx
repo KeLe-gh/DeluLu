@@ -29,9 +29,7 @@ const poolId = 'tier-pool'
 const sensors = [
     PointerSensor.configure({
         activationConstraints: [
-            new PointerActivationConstraints.Distance({
-                value: 5,
-            }),
+            new PointerActivationConstraints.Distance({ value: 5 }),
         ],
     }),
     KeyboardSensor.configure({
@@ -147,10 +145,12 @@ export function TierBoard({
                               items,
                               disabled,
                               onMove,
+                              onDragChange,
                           }: {
     list: TierList
     items: readonly CatalogItem[]
     disabled: boolean
+    onDragChange?: (dragging: boolean) => void
     onMove: (
         entryId: string,
         tierId: string | null,
@@ -169,7 +169,6 @@ export function TierBoard({
         if (!source || !target || target.id === source.id) return null
 
         const entryId = String(source.id)
-
         const targetEntry = list.entries.find(
             (entry) => entry.id === target.id,
         )
@@ -284,10 +283,8 @@ export function TierBoard({
                             String(
                                 operation.source?.data.name ?? 'Profil',
                             ) + ' aufgenommen.',
-
                         dragover: ({ operation }: DragOverEvent) => {
                             const next = locate({ operation })
-
                             if (!next) return
 
                             const label = list.tiers.find(
@@ -296,7 +293,6 @@ export function TierBoard({
 
                             return label + ', Position ' + (next.index + 1)
                         },
-
                         dragend: ({ canceled }: DragEndEvent) =>
                             canceled
                                 ? 'Verschieben abgebrochen.'
@@ -309,11 +305,13 @@ export function TierBoard({
                     event.preventDefault()
                 }
             }}
+            onDragStart={() => onDragChange?.(true)}
             onDragMove={preview}
             onDragOver={preview}
             onDragEnd={async (event) => {
-                const next = !event.canceled ? locate(event) : null
+                onDragChange?.(false)
 
+                const next = !event.canceled ? locate(event) : null
                 setPlacement(null)
 
                 if (!next || disabled || finishing.current) return

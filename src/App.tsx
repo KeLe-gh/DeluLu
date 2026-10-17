@@ -8,7 +8,6 @@ import { AppAppearance } from './features/appearance/AppAppearance'
 import { ProfileImageContext } from './features/images/ProfileImageContext'
 import { ListMenuPage } from './features/lists'
 import { RankingsPage } from './features/rankings'
-import { RankingDetailPage } from './features/rankings/pages/RankingDetailPage'
 import { supabaseAppearanceRepository } from './infrastructure/supabase/supabaseAppearanceRepository'
 import { supabaseAuthService } from './infrastructure/supabase/supabaseAuthService'
 import { supabaseCatalogRepository } from './infrastructure/supabase/supabaseCatalogRepository'
@@ -31,6 +30,10 @@ const SharedRankingsWorkspace = lazy(
     () => import('./features/sharing/SharedRankingsWorkspace'),
 )
 
+const LiveRankingDetail = lazy(
+    () => import('./features/sharing/SharedRankingDetail'),
+)
+
 const MediaWorkspace = lazy(
     () => import('./features/media/MediaWorkspace'),
 )
@@ -47,31 +50,14 @@ function WorkspaceScreen({
 }) {
     const [createOpen, setCreateOpen] = useState(false)
     const { path, navigate, back } = navigation
-    const match = path.match(/^\/rankings\/([^/]+)$/)
-
-    let listId: string | null = null
-
-    try {
-        listId = match ? decodeURIComponent(match[1]) : null
-    } catch {
-        listId = null
-    }
-
-    const list = workspace.lists.find(
-        (item) => item.id === listId,
-    )
 
     const parent = path === '/'
         ? null
         : path === '/lists'
             ? '/'
-            : path === '/rankings'
-                ? '/lists'
-                : match
-                    ? '/rankings'
-                    : '/'
+            : '/lists'
 
-    const canCreate = path === '/rankings' || Boolean(list)
+    const canCreate = path === '/rankings'
 
     return (
         <>
@@ -79,7 +65,7 @@ function WorkspaceScreen({
                 onHome={() => navigate('/')}
                 onBack={parent ? () => back(parent) : undefined}
                 onAdd={canCreate ? () => setCreateOpen(true) : undefined}
-                addLabel={list ? 'Eintrag hinzufügen' : 'Liste erstellen'}
+                addLabel="Liste erstellen"
             />
 
             {path === '/' ? (
@@ -105,47 +91,6 @@ function WorkspaceScreen({
                     onRenameList={workspace.renameList}
                     onDeleteList={workspace.deleteList}
                     onReorderList={workspace.reorderList}
-                />
-            ) : list ? (
-                <RankingDetailPage
-                    list={list}
-                    catalogItems={workspace.items}
-                    createOpen={createOpen}
-                    onCloseCreate={() => setCreateOpen(false)}
-                    getItemName={workspace.getItemName}
-                    getItemImageId={workspace.getItemImageId}
-                    onAddEntry={(name, position, photo, background) =>
-                        workspace.addEntry(
-                            list.id,
-                            name,
-                            position,
-                            photo,
-                            background,
-                        )
-                    }
-                    onAddExistingEntry={(id, position) =>
-                        workspace.addExistingEntry(
-                            list.id,
-                            id,
-                            position,
-                        )
-                    }
-                    onUpdateEntry={(id, name, position, photo, background) =>
-                        workspace.updateEntry(
-                            list.id,
-                            id,
-                            name,
-                            position,
-                            photo,
-                            background,
-                        )
-                    }
-                    onRemoveEntry={(id) =>
-                        workspace.removeEntry(list.id, id)
-                    }
-                    onReorderEntry={(id, index) =>
-                        workspace.reorderEntry(list.id, id, index)
-                    }
                 />
             ) : (
                 <main className="page">
@@ -226,6 +171,32 @@ function RankingApp() {
 
 function DeluluApp() {
     const navigation = useAppNavigation()
+
+    const rankingId = navigation.path.match(
+        /^\/rankings\/([0-9a-f-]{36})$/,
+    )?.[1]
+
+    if (rankingId) {
+        return (
+            <div className="app-shell">
+                <Suspense
+                    fallback={
+                        <main className="page">
+                            <p role="status">Liste wird geladen …</p>
+                        </main>
+                    }
+                >
+                    <LiveRankingDetail
+                        key={rankingId}
+                        id={rankingId}
+                        owned
+                        navigate={navigation.navigate}
+                        onBack={() => navigation.back('/rankings')}
+                    />
+                </Suspense>
+            </div>
+        )
+    }
 
     if (
         navigation.path === '/shared' ||

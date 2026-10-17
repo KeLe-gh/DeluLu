@@ -6,14 +6,8 @@ import {
     PointerActivationConstraints,
     PointerSensor,
 } from '@dnd-kit/dom'
-import type {
-    DragEndEvent,
-    DragOverEvent,
-} from '@dnd-kit/dom'
-import {
-    isSortable,
-    useSortable,
-} from '@dnd-kit/react/sortable'
+import type { DragEndEvent, DragOverEvent } from '@dnd-kit/dom'
+import { isSortable, useSortable } from '@dnd-kit/react/sortable'
 import type {
     EntryId,
     ItemId,
@@ -27,12 +21,9 @@ import './RankingEntries.css'
 const rankingSensors = [
     PointerSensor.configure({
         activationConstraints: [
-            new PointerActivationConstraints.Distance({
-                value: 6,
-            }),
+            new PointerActivationConstraints.Distance({ value: 6 }),
         ],
     }),
-
     KeyboardSensor.configure({
         keyboardCodes: {
             start: ['Space'],
@@ -51,6 +42,7 @@ interface SortableRankingEntriesProps {
     getItemName: (itemId: ItemId) => string
     getItemImageId: (itemId: ItemId) => string | null
     getItemBackgroundImageId: (itemId: ItemId) => string | null
+    onDragChange?: (dragging: boolean) => void
     onEdit: (entryId: EntryId) => void
     onRemove: (entryId: EntryId) => Promise<boolean>
     onReorder: (
@@ -90,30 +82,17 @@ function SortableEntry({
             value={entry.position}
             className={
                 'ranking-entry' +
-                (
-                    backgroundImageId
-                        ? ' ranking-entry--background'
-                        : ''
-                ) +
-                (
-                    isDragging
-                        ? ' ranking-entry--dragging'
-                        : ''
-                )
+                (backgroundImageId ? ' ranking-entry--background' : '') +
+                (isDragging ? ' ranking-entry--dragging' : '')
             }
         >
-            <SwipeToReveal
-                label={name}
-                onRemove={onRemove}
-            >
+            <SwipeToReveal label={name} onRemove={onRemove}>
                 {backgroundImageId && (
                     <span
                         className="ranking-entry__background"
                         aria-hidden="true"
                     >
-                        <BackgroundPhoto
-                            imageId={backgroundImageId}
-                        />
+                        <BackgroundPhoto imageId={backgroundImageId} />
                     </span>
                 )}
 
@@ -121,9 +100,7 @@ function SortableEntry({
                     type="button"
                     className="ranking-entry__edit"
                     onClick={onEdit}
-                    onContextMenu={(event) =>
-                        event.preventDefault()
-                    }
+                    onContextMenu={(event) => event.preventDefault()}
                     aria-label={
                         name +
                         ', Position ' +
@@ -139,10 +116,7 @@ function SortableEntry({
                     </span>
 
                     {imageId && (
-                        <ProfilePhoto
-                            imageId={imageId}
-                            name={name}
-                        />
+                        <ProfilePhoto imageId={imageId} name={name} />
                     )}
 
                     <span className="ranking-entry__name">
@@ -157,9 +131,7 @@ function SortableEntry({
                     data-drag-handle
                     aria-label={name + ' verschieben'}
                     title="Zum Verschieben ziehen"
-                    onContextMenu={(event) =>
-                        event.preventDefault()
-                    }
+                    onContextMenu={(event) => event.preventDefault()}
                 >
                     <span
                         className="ranking-entry__grip"
@@ -181,6 +153,7 @@ export function SortableRankingEntries({
                                            onEdit,
                                            onRemove,
                                            onReorder,
+                                           onDragChange,
                                        }: SortableRankingEntriesProps) {
     const [error, setError] = useState('')
     const suppressEditUntil = useRef(0)
@@ -211,27 +184,19 @@ export function SortableRankingEntries({
                                 'Escape zum Abbrechen.',
                         },
                         announcements: {
-                            dragstart: () =>
-                                'Eintrag aufgenommen.',
-
+                            dragstart: () => 'Eintrag aufgenommen.',
                             dragover: ({
                                            operation: { source },
                                        }: DragOverEvent) => {
-                                if (!isSortable(source)) {
-                                    return
-                                }
+                                if (!isSortable(source)) return
 
-                                const slot =
-                                    orderedEntries[source.index]
+                                const slot = orderedEntries[source.index]
 
                                 return slot
                                     ? `Zielposition ${slot.position}.`
                                     : undefined
                             },
-
-                            dragend: ({
-                                          canceled,
-                                      }: DragEndEvent) =>
+                            dragend: ({ canceled }: DragEndEvent) =>
                                 canceled
                                     ? 'Verschieben abgebrochen.'
                                     : 'Verschieben beendet.',
@@ -239,27 +204,22 @@ export function SortableRankingEntries({
                     }),
                 ]}
                 onDragStart={() => {
-                    suppressEditUntil.current =
-                        Number.POSITIVE_INFINITY
-
+                    onDragChange?.(true)
+                    suppressEditUntil.current = Number.POSITIVE_INFINITY
                     setError('')
                 }}
                 onDragEnd={async (event) => {
-                    suppressEditUntil.current =
-                        Date.now() + 200
+                    onDragChange?.(false)
+                    suppressEditUntil.current = Date.now() + 200
 
-                    if (event.canceled) {
-                        return
-                    }
+                    if (event.canceled) return
 
                     const { source } = event.operation
 
                     if (
                         !isSortable(source) ||
                         source.initialIndex === source.index
-                    ) {
-                        return
-                    }
+                    ) return
 
                     try {
                         const reordered = await onReorder(
@@ -286,13 +246,9 @@ export function SortableRankingEntries({
                             entry={entry}
                             index={index}
                             name={getItemName(entry.itemId)}
-                            imageId={
-                                getItemImageId(entry.itemId)
-                            }
+                            imageId={getItemImageId(entry.itemId)}
                             backgroundImageId={
-                                getItemBackgroundImageId(
-                                    entry.itemId,
-                                )
+                                getItemBackgroundImageId(entry.itemId)
                             }
                             onEdit={() => {
                                 if (
@@ -302,9 +258,7 @@ export function SortableRankingEntries({
                                     onEdit(entry.id)
                                 }
                             }}
-                            onRemove={() =>
-                                onRemove(entry.id)
-                            }
+                            onRemove={() => onRemove(entry.id)}
                         />
                     ))}
                 </ol>

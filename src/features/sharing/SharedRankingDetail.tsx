@@ -1,34 +1,29 @@
-import {
-    useEffect,
-    useMemo,
-    useRef,
-    useState,
-} from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { AppHeader } from '../../app/AppHeader'
+import { supabaseProfileImageStore } from '../../infrastructure/supabase/supabaseProfileImageStore'
 import { editSharedRankingEntry } from '../../infrastructure/supabase/supabaseSharedRankingEdit'
 import { addSharedRankingEntry } from '../../infrastructure/supabase/supabaseSharedRankingAdd'
-import { supabaseProfileImageStore } from '../../infrastructure/supabase/supabaseProfileImageStore'
 import {
-    SharedRankingUnavailableError,
     sharedRankingImages,
     supabaseRankingSharing,
 } from '../../infrastructure/supabase/supabaseRankingSharing'
-import { RevisionConflictError } from '../../shared/errors/persistence.errors'
 import { Modal } from '../../shared/components/Modal'
 import { ModalFeedbackContext } from '../../shared/components/ModalFeedbackContext'
 import type { RankingList } from '../../shared/types/list.types'
 import { ProfileImageContext } from '../images/ProfileImageContext'
 import { RankingEntryEditor } from '../rankings/components/RankingEntryEditor'
+import { RankingShareButton } from '../rankings/components/RankingShareButton'
 import { SortableRankingEntries } from '../rankings/components/SortableRankingEntries'
 import {
+    getRankingSize,
     removeRankingEntry,
     reorderRankingEntries,
 } from '../rankings/model/ranking.operations'
 import { SharedRankingAddDialog } from './SharedRankingAddDialog'
+import { useLiveList } from './hooks/useLiveList'
 
-type SharedRanking = Awaited<
-    ReturnType<typeof supabaseRankingSharing.read>
->
+type SharedRanking =
+    Awaited<ReturnType<typeof supabaseRankingSharing.read>>
 
 function Entries({
                      ranking,
@@ -36,10 +31,12 @@ function Entries({
                      epoch,
                      onEdit,
                      onSave,
+                     onDragChange,
                  }: {
     ranking: SharedRanking
     blocked: boolean
     epoch: number
+    onDragChange: (dragging: boolean) => void
     onEdit: (id: string) => void
     onSave: (next: RankingList | null) => Promise<boolean>
 }) {
@@ -47,7 +44,6 @@ function Entries({
         () => sharedRankingImages(ranking.ownerId),
         [ranking.ownerId],
     )
-
     const items = new Map(
         ranking.items.map((item) => [item.id, item]),
     )
@@ -56,16 +52,14 @@ function Entries({
         <ProfileImageContext.Provider value={store}>
             <div inert={blocked}>
                 {ranking.list.entries.length === 0 ? (
-                    <p className="empty-state">
-                        Noch keine Einträge.
-                    </p>
+                    <p className="empty-state">Noch keine Einträge.</p>
                 ) : (
                     <SortableRankingEntries
                         key={epoch}
+                        onDragChange={onDragChange}
                         entries={ranking.list.entries}
                         getItemName={(id) =>
-                            items.get(id)?.name ??
-                            'Unbekanntes Profil'
+                            items.get(id)?.name ?? 'Unbekanntes Profil'
                         }
                         getItemImageId={(id) =>
                             items.get(id)?.profileImageId ?? null
@@ -74,19 +68,19 @@ function Entries({
                             items.get(id)?.backgroundImageId ?? null
                         }
                         onEdit={onEdit}
-                        onRemove={(entryId) =>
-                            onSave(removeRankingEntry(ranking.list, {
+                        onRemove={(entryId) => onSave(
+                            removeRankingEntry(ranking.list, {
                                 entryId,
                                 timestamp: new Date().toISOString(),
-                            }))
-                        }
-                        onReorder={(entryId, toIndex) =>
-                            onSave(reorderRankingEntries(ranking.list, {
+                            }),
+                        )}
+                        onReorder={(entryId, toIndex) => onSave(
+                            reorderRankingEntries(ranking.list, {
                                 entryId,
                                 toIndex,
                                 timestamp: new Date().toISOString(),
-                            }))
-                        }
+                            }),
+                        )}
                     />
                 )}
             </div>
@@ -98,197 +92,143 @@ export default function SharedRankingDetail({
                                                 id,
                                                 navigate,
                                                 onBack,
+                                                owned = false,
                                             }: {
+    owned?: boolean
     id: string
     onBack: () => void
     navigate: (path: string, replace?: boolean) => void
 }) {
-    const [attempt, setAttempt] = useState(0)
-
-    const [result, setResult] = useState<{
-        attempt: number
-        data: SharedRanking | null
-    } | null>(null)
-
-    const [busy, setBusy] = useState(false)
-    const [error, setError] = useState('')
-    const [needsReload, setNeedsReload] = useState(false)
     const [editingId, setEditingId] = useState<string | null>(null)
     const [createOpen, setCreateOpen] = useState(false)
     const [confirmLeave, setConfirmLeave] = useState(false)
-    const [epoch, setEpoch] = useState(0)
+    const [leaveError, setLeaveError] = useState('')
+    const [leaving, setLeaving] = useState(false)
     const working = useRef(false)
 
-    const current =
-        result?.attempt === attempt ? result : null
+    const live = useLiveList(
+        id,
+        supabaseRankingSharing.read,
+        Boolean(editingId) || createOpen || confirmLeave,
+        () => {
+            setEditingId(null)
+            setCreateOpen(false)
+            setConfirmLeave(false)
+        },
+    )
 
-    const data = current?.data ?? null
-    const loading = !current
-    const blocked = loading || busy || needsReload
+    const {
+        data,
+        loading,
+        busy,
+        blocked,
+        error,
+        needsReload,
+        epoch,
+    } = live
 
     const editing = data?.list.entries.find(
         (entry) => entry.id === editingId,
     )
-
     const item = data?.items.find(
         (entry) => entry.id === editing?.itemId,
     )
-
     const imageOwner = data?.ownerId ?? ''
-
     const editingImages = useMemo(
         () => sharedRankingImages(imageOwner),
         [imageOwner],
     )
 
     useEffect(() => {
-        let active = true
-
-        void supabaseProfileImageStore.cleanupUnused().catch(
-            (error) => {
-                console.warn(
-                    '[deluLu] Photo cleanup failed:',
-                    error,
-                )
-            },
-        )
-
-        void supabaseRankingSharing.read(id).then(
-            (data) => {
-                if (active) {
-                    setResult({ attempt, data })
-                }
-            },
-            () => {
-                if (active) {
-                    setResult({ attempt, data: null })
-                }
-            },
-        )
-
-        return () => {
-            active = false
-        }
-    }, [id, attempt])
+        void supabaseProfileImageStore.cleanupUnused().catch((cause) => {
+            console.warn('[deluLu] Photo cleanup failed:', cause)
+        })
+    }, [])
 
     function reload() {
-        if (working.current) return
-
+        if (busy || working.current) return
         setEditingId(null)
         setCreateOpen(false)
         setConfirmLeave(false)
-        setNeedsReload(false)
-        setError('')
-        setEpoch((value) => value + 1)
-        setAttempt((value) => value + 1)
+        live.reload()
     }
 
-    async function save(
-        next: RankingList | null,
-    ): Promise<boolean> {
-        if (working.current || blocked || !data) return false
-
-        if (!next) {
-            setError(
-                'Die Änderung ist so nicht möglich. Bitte prüfe die Position.',
-            )
-            return false
-        }
-
+    async function save(next: RankingList | null): Promise<boolean> {
+        if (working.current || blocked || !data || !next) return false
         if (next === data.list) return true
 
-        return perform(() =>
-            supabaseRankingSharing.saveEntries(
-                id,
-                data.revision,
-                next.entries,
-            ),
-        )
+        return perform(() => supabaseRankingSharing.saveEntries(
+            id,
+            data.revision,
+            next.entries,
+        ))
     }
 
     async function perform(
         action: () => Promise<void>,
     ): Promise<boolean> {
-        if (working.current || blocked || !data) return false
+        const saved = await live.perform(action)
 
-        working.current = true
-        setBusy(true)
-        setError('')
-
-        try {
-            await action()
-
-            const fresh = await supabaseRankingSharing.read(id)
-
-            setResult({ attempt, data: fresh })
+        if (saved) {
             setEditingId(null)
             setCreateOpen(false)
-
-            return true
-        } catch (failure) {
-            if (failure instanceof SharedRankingUnavailableError) {
-                setResult({ attempt, data: null })
-                setEditingId(null)
-                setCreateOpen(false)
-            } else {
-                setNeedsReload(true)
-
-                setError(
-                    failure instanceof RevisionConflictError
-                        ? 'Jemand anderes hat die Liste geändert. Bitte lade sie erneut und führe deine Änderung noch einmal aus.'
-                        : 'Der aktuelle Stand konnte nicht bestätigt werden. Bitte lade die Liste erneut.',
-                )
-            }
-
-            return false
-        } finally {
-            setEpoch((value) => value + 1)
-            working.current = false
-            setBusy(false)
         }
+
+        return saved
     }
 
     async function leave() {
         if (working.current) return
 
         working.current = true
-        setBusy(true)
-        setError('')
+        setLeaving(true)
+        setLeaveError('')
 
         try {
             await supabaseRankingSharing.leave(id)
             navigate('/shared', true)
         } catch {
-            setError(
+            setLeaveError(
                 'Verlassen fehlgeschlagen. Bitte versuche es erneut.',
             )
         } finally {
             working.current = false
-            setBusy(false)
+            setLeaving(false)
         }
     }
 
-    const feedback = (
-        <>
-            {busy && <p role="status">Speichern …</p>}
-            {error && <p role="alert">{error}</p>}
+    const feedback = <>
+        {live.offline && (
+            <p className="field-hint">Live-Verbindung unterbrochen.</p>
+        )}
+        {live.changed && (
+            <p role="status">
+                Neue Änderungen vorhanden. Dein Entwurf bleibt erhalten.
+            </p>
+        )}
+        {leaveError && <p role="alert">{leaveError}</p>}
+        {busy && <p role="status">Speichern …</p>}
+        {error && <p role="alert">{error}</p>}
 
-            {needsReload && (
-                <button
-                    type="button"
-                    className="sharing-button"
-                    disabled={busy}
-                    onClick={reload}
-                >
-                    Liste erneut laden
-                </button>
-            )}
-        </>
-    )
+        {needsReload && (
+            <button
+                type="button"
+                className="sharing-button"
+                disabled={busy}
+                onClick={reload}
+            >
+                Liste erneut laden
+            </button>
+        )}
+    </>
 
     return (
         <ModalFeedbackContext.Provider
-            value={{ busy, blocked, content: feedback }}
+            value={{
+                busy: busy || leaving,
+                blocked: blocked || leaving,
+                content: feedback,
+            }}
         >
             <AppHeader
                 onHome={() => navigate('/')}
@@ -302,9 +242,16 @@ export default function SharedRankingDetail({
             />
 
             <main className="page">
-                <h1>
-                    {data?.list.title ?? 'Geteilte Liste'}
-                </h1>
+                <div className="page-heading">
+                    <h1>{data?.list.title ?? 'Top-Liste'}</h1>
+                    {data && (
+                        <span className="count">
+                            {data.list.entries.length
+                                ? 'Top ' + getRankingSize(data.list)
+                                : 'Leer'}
+                        </span>
+                    )}
+                </div>
 
                 <div className="sharing-actions">
                     <button
@@ -318,16 +265,23 @@ export default function SharedRankingDetail({
 
                     {data && (
                         data.isOwner ? (
-                            <button
-                                type="button"
-                                className="sharing-button"
-                                disabled={busy}
-                                onClick={() =>
-                                    navigate('/rankings/' + id, true)
-                                }
-                            >
-                                Eigene Liste öffnen
-                            </button>
+                            owned ? (
+                                <div inert={blocked}>
+                                    <RankingShareButton listId={id} />
+                                </div>
+                            ) : (
+                                <button
+                                    type="button"
+                                    className="sharing-button"
+                                    disabled={busy}
+                                    onClick={() => navigate(
+                                        '/rankings/' + id,
+                                        true,
+                                    )}
+                                >
+                                    Eigene Liste öffnen
+                                </button>
+                            )
                         ) : (
                             <button
                                 type="button"
@@ -345,11 +299,11 @@ export default function SharedRankingDetail({
                     <p role="status">Liste wird geladen …</p>
                 )}
 
-                {current && !data && (
+                {!loading && !data && (
                     <p role="alert">
                         Diese Liste ist gerade nicht verfügbar.
-                        Prüfe deine Verbindung. Vielleicht wurde
-                        sie gelöscht oder der Zugriff beendet.
+                        Prüfe deine Verbindung.
+                        Vielleicht wurde sie gelöscht oder der Zugriff beendet.
                     </p>
                 )}
 
@@ -362,6 +316,7 @@ export default function SharedRankingDetail({
                         epoch={epoch}
                         onEdit={setEditingId}
                         onSave={save}
+                        onDragChange={live.onDragChange}
                     />
                 )}
 
@@ -386,12 +341,12 @@ export default function SharedRankingDetail({
                                     background,
                                 }))
                             }
-                            onRemove={() =>
-                                save(removeRankingEntry(data.list, {
+                            onRemove={() => save(
+                                removeRankingEntry(data.list, {
                                     entryId: editing.id,
                                     timestamp: new Date().toISOString(),
-                                }))
-                            }
+                                }),
+                            )}
                             onCancel={() => setEditingId(null)}
                         />
                     </ProfileImageContext.Provider>
@@ -424,20 +379,18 @@ export default function SharedRankingDetail({
                     />
                 )}
 
-                {confirmLeave && (
+                {data && confirmLeave && (
                     <Modal
                         title="Liste verlassen?"
-                        busy={busy}
+                        busy={busy || leaving}
                         onClose={() => setConfirmLeave(false)}
                     >
                         <div className="sharing-stack">
                             <p>
-                                Die Liste bleibt für die anderen
-                                erhalten. Mit einem gültigen
-                                Einladungslink kannst du später
-                                wieder beitreten.
+                                Die Liste bleibt für die anderen erhalten.
+                                Mit einem gültigen Einladungslink kannst du
+                                später wieder beitreten.
                             </p>
-
                             <button
                                 type="button"
                                 className="modal__danger"

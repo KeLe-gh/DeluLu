@@ -1,70 +1,13 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useRef, useState } from 'react'
 import { AppHeader } from '../../app/AppHeader'
 import { supabaseRankingSharing } from '../../infrastructure/supabase/supabaseRankingSharing'
 import { supabaseTierSharing } from '../../infrastructure/supabase/supabaseTierSharing'
 import SharedRankingDetail from './SharedRankingDetail'
 import SharedTierDetail from './SharedTierDetail'
+import { useLiveList } from './hooks/useLiveList'
 import './Sharing.css'
 
 type Navigate = (path: string, replace?: boolean) => void
-
-function useSharedRead<T>(read: () => Promise<T>) {
-    const [attempt, setAttempt] = useState(0)
-    const [result, setResult] = useState<{
-        attempt: number
-        data: T | null
-        failed: boolean
-    } | null>(null)
-
-    const reload = useCallback(
-        () => setAttempt((value) => value + 1),
-        [],
-    )
-
-    useEffect(() => {
-        let active = true
-
-        void read().then(
-            (data) => {
-                if (active) {
-                    setResult({ attempt, data, failed: false })
-                }
-            },
-            () => {
-                if (active) {
-                    setResult({ attempt, data: null, failed: true })
-                }
-            },
-        )
-
-        return () => {
-            active = false
-        }
-    }, [read, attempt])
-
-    useEffect(() => {
-        const refresh = () => {
-            if (document.visibilityState === 'visible') reload()
-        }
-
-        window.addEventListener('focus', refresh)
-        document.addEventListener('visibilitychange', refresh)
-
-        return () => {
-            window.removeEventListener('focus', refresh)
-            document.removeEventListener('visibilitychange', refresh)
-        }
-    }, [reload])
-
-    const current = result?.attempt === attempt ? result : null
-
-    return {
-        data: current?.data ?? null,
-        failed: current?.failed ?? false,
-        loading: !current,
-        reload,
-    }
-}
 
 async function readSharedLists() {
     const [rankings, tiers] = await Promise.all([
@@ -92,60 +35,74 @@ async function readSharedLists() {
 }
 
 function SharedLists({ navigate }: { navigate: Navigate }) {
-    const { data, failed, loading, reload } =
-        useSharedRead(readSharedLists)
+    const { data, error, loading, reload, offline } =
+        useLiveList('overview', readSharedLists)
 
-    return <main className="page">
-        <h1>Geteilte Listen</h1>
+    return (
+        <main className="page">
+            <h1>Geteilte Listen</h1>
 
-        <div className="sharing-actions">
-            <button
-                className="sharing-button"
-                type="button"
-                disabled={loading}
-                onClick={reload}
-            >
-                Aktualisieren
-            </button>
-        </div>
-
-        {loading && <p role="status">Listen werden geladen …</p>}
-
-        {failed && <p role="alert">
-            Die Listen konnten nicht geladen werden.
-            Bitte versuche es erneut.
-        </p>}
-
-        {data?.length === 0 && <div className="empty-state">
-            <p>Noch keine geteilten Listen.</p>
-            <p>Öffne einen Einladungslink, um beizutreten.</p>
-        </div>}
-
-        <div className="feature-grid">
-            {data?.map((list) => <button
-                type="button"
-                className="feature-card"
-                key={list.id}
-                onClick={() => navigate(list.path)}
-            >
-                <span>
-                    {list.title}
-                    <small
-                        className="field-hint"
-                        style={{ display: 'block' }}
-                    >
-                        {list.type}
-                    </small>
-                </span>
-                <span
-                    className="feature-card__arrow"
-                    aria-hidden="true"
+            <div className="sharing-actions">
+                <button
+                    className="sharing-button"
+                    type="button"
+                    disabled={loading}
+                    onClick={reload}
                 >
-                    ›
-                </span>
-            </button>)}
-        </div>
-    </main>
+                    Aktualisieren
+                </button>
+            </div>
+
+            {loading && <p role="status">Listen werden geladen …</p>}
+
+            {offline && (
+                <p className="field-hint">
+                    Live-Verbindung unterbrochen.
+                </p>
+            )}
+
+            {error && (
+                <p role="alert">
+                    Die Listen konnten nicht geladen werden.
+                    Bitte versuche es erneut.
+                </p>
+            )}
+
+            {data?.length === 0 && (
+                <div className="empty-state">
+                    <p>Noch keine geteilten Listen.</p>
+                    <p>Öffne einen Einladungslink, um beizutreten.</p>
+                </div>
+            )}
+
+            <div className="feature-grid">
+                {data?.map((list) => (
+                    <button
+                        type="button"
+                        className="feature-card"
+                        key={list.id}
+                        onClick={() => navigate(list.path)}
+                    >
+                        <span>
+                            {list.title}
+                            <small
+                                className="field-hint"
+                                style={{ display: 'block' }}
+                            >
+                                {list.type}
+                            </small>
+                        </span>
+                        <span
+                            className="feature-card__arrow"
+                            aria-hidden="true"
+                        >
+                            ›
+                        </span>
+                    </button>
+                ))}
+            </div>
+        </main>
+    )
 }
 
 function Invitation({
@@ -189,29 +146,31 @@ function Invitation({
         }
     }
 
-    return <main className="page">
-        <h1>Eine Liste für euch 💜</h1>
-        <p>
-            Du wurdest zu {
-            tier
-                ? 'einer Tierliste oder einem Cake'
-                : 'einer Top-Liste'
-        } eingeladen.
-        </p>
+    return (
+        <main className="page">
+            <h1>Eine Liste für euch 💜</h1>
+            <p>
+                Du wurdest zu {
+                tier
+                    ? 'einer Tierliste oder einem Cake'
+                    : 'einer Top-Liste'
+            } eingeladen.
+            </p>
 
-        <div className="sharing-actions">
-            <button
-                type="button"
-                className="sharing-button"
-                disabled={busy}
-                onClick={() => void join()}
-            >
-                {busy ? 'Beitritt läuft …' : 'Beitreten'}
-            </button>
-        </div>
+            <div className="sharing-actions">
+                <button
+                    type="button"
+                    className="sharing-button"
+                    disabled={busy}
+                    onClick={() => void join()}
+                >
+                    {busy ? 'Beitritt läuft …' : 'Beitreten'}
+                </button>
+            </div>
 
-        {error && <p role="alert">{error}</p>}
-    </main>
+            {error && <p role="alert">{error}</p>}
+        </main>
+    )
 }
 
 export default function SharedRankingsWorkspace({
@@ -234,36 +193,46 @@ export default function SharedRankingsWorkspace({
         /^\/shared\/([0-9a-f-]{36})$/,
     )?.[1]
 
-    return <div className="app-shell">
-        {!id && !tierId && <AppHeader
-            onHome={() => onNavigate('/')}
-            onBack={() => onBack('/lists')}
-        />}
+    return (
+        <div className="app-shell">
+            {!id && !tierId && (
+                <AppHeader
+                    onHome={() => onNavigate('/')}
+                    onBack={() => onBack('/lists')}
+                />
+            )}
 
-        {path === '/shared' ? <SharedLists navigate={onNavigate} />
-            : token ? <Invitation
+            {path === '/shared' ? (
+                <SharedLists navigate={onNavigate} />
+            ) : token ? (
+                <Invitation
                     key={token}
                     tier={tier}
                     token={token}
                     navigate={onNavigate}
                 />
-                : tierId ? <SharedTierDetail
-                        key={tierId}
-                        id={tierId}
-                        navigate={onNavigate}
-                        onBack={() => onBack('/shared')}
-                    />
-                    : id ? <SharedRankingDetail
-                            key={id}
-                            id={id}
-                            navigate={onNavigate}
-                            onBack={() => onBack('/shared')}
-                        />
-                        : <main className="page">
-                            <h1>Link unvollständig</h1>
-                            <p>
-                                Bitte öffne den vollständigen Einladungslink.
-                            </p>
-                        </main>}
-    </div>
+            ) : tierId ? (
+                <SharedTierDetail
+                    key={tierId}
+                    id={tierId}
+                    navigate={onNavigate}
+                    onBack={() => onBack('/shared')}
+                />
+            ) : id ? (
+                <SharedRankingDetail
+                    key={id}
+                    id={id}
+                    navigate={onNavigate}
+                    onBack={() => onBack('/shared')}
+                />
+            ) : (
+                <main className="page">
+                    <h1>Link unvollständig</h1>
+                    <p>
+                        Bitte öffne den vollständigen Einladungslink.
+                    </p>
+                </main>
+            )}
+        </div>
+    )
 }
