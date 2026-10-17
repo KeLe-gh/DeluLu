@@ -226,6 +226,8 @@ function DeluluApp() {
                       }>
                 <TierWorkspace
                     repository={supabaseTierRepository}
+                    catalogRepository={supabaseCatalogRepository}
+                    imageStore={supabaseProfileImageStore}
                     path={navigation.path}
                     onNavigate={navigation.navigate}
                     onBack={navigation.back}

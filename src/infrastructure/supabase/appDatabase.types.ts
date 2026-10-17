@@ -19,9 +19,35 @@ export type TierRow = {
     position: number
 }
 
+export type TierEntryRow = {
+    id: string
+    owner_id: string
+    list_id: string
+    item_id: string
+    tier_id: string | null
+    position: number
+    note: string
+}
+
 export type AppDatabase = Omit<Database, 'public'> & {
     public: Omit<Database['public'], 'Tables' | 'Functions'> & {
         Functions: Database['public']['Functions'] & {
+            add_tier_entry: {
+                Args: {
+                    p_id: string
+                    p_list_id: string
+                    p_item_id: string
+                    p_expected_revision: number
+                    p_new_name?: string
+                    p_profile_image_id?: string
+                }
+                Returns: {
+                    tier_list: TierListRow
+                    catalog_item:
+                        Database['public']['Tables']['catalog_items']['Row']
+                }
+            }
+
             create_tier_list: {
                 Args: {
                     p_id: string
@@ -39,6 +65,24 @@ export type AppDatabase = Omit<Database, 'public'> & {
         }
 
         Tables: Database['public']['Tables'] & {
+            tier_entries: {
+                Row: TierEntryRow
+                Insert: {
+                    id: string
+                    owner_id?: string
+                    list_id: string
+                    item_id: string
+                    tier_id?: string | null
+                    position: number
+                    note?: string
+                }
+                Update: {
+                    tier_id?: string | null
+                    position?: number
+                }
+                Relationships: []
+            }
+
             tier_lists: {
                 Row: TierListRow
                 Insert: {
