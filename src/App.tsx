@@ -3,10 +3,12 @@ import { HomePage } from './app/HomePage'
 import { useAppNavigation } from './app/hooks/useAppNavigation'
 import { useRankingWorkspace } from './app/hooks/useRankingWorkspace'
 import { AuthGate } from './features/auth'
+import { AppAppearance } from './features/appearance/AppAppearance'
 import { ProfileImageContext } from './features/images/ProfileImageContext'
 import { ListMenuPage } from './features/lists'
 import { RankingsPage } from './features/rankings'
 import { RankingDetailPage } from './features/rankings/pages/RankingDetailPage'
+import { supabaseAppearanceRepository } from './infrastructure/supabase/supabaseAppearanceRepository'
 import { supabaseAuthService } from './infrastructure/supabase/supabaseAuthService'
 import { supabaseCatalogRepository } from './infrastructure/supabase/supabaseCatalogRepository'
 import { supabaseProfileImageStore } from './infrastructure/supabase/supabaseProfileImageStore'
@@ -21,21 +23,20 @@ type Navigation = ReturnType<typeof useAppNavigation>
 function WorkspaceScreen({
                              workspace,
                              navigation,
+                             onOpenAppearance,
                          }: {
     workspace: Workspace
     navigation: Navigation
+    onOpenAppearance: () => void
 }) {
     const [createOpen, setCreateOpen] = useState(false)
     const { path, navigate, back } = navigation
-
     const match = path.match(/^\/rankings\/([^/]+)$/)
 
     let listId: string | null = null
 
     try {
-        listId = match
-            ? decodeURIComponent(match[1])
-            : null
+        listId = match ? decodeURIComponent(match[1]) : null
     } catch {
         listId = null
     }
@@ -54,8 +55,7 @@ function WorkspaceScreen({
                     ? '/rankings'
                     : '/'
 
-    const canCreate =
-        path === '/rankings' || Boolean(list)
+    const canCreate = path === '/rankings' || Boolean(list)
 
     return (
         <>
@@ -88,14 +88,10 @@ function WorkspaceScreen({
                         type="button"
                         className="icon-button icon-button--add"
                         aria-label={
-                            list
-                                ? 'Eintrag hinzufügen'
-                                : 'Liste erstellen'
+                            list ? 'Eintrag hinzufügen' : 'Liste erstellen'
                         }
                         title={
-                            list
-                                ? 'Eintrag hinzufügen'
-                                : 'Liste erstellen'
+                            list ? 'Eintrag hinzufügen' : 'Liste erstellen'
                         }
                         onClick={() => setCreateOpen(true)}
                     >
@@ -109,25 +105,19 @@ function WorkspaceScreen({
             {path === '/' ? (
                 <HomePage
                     onOpenLists={() => navigate('/lists')}
+                    onOpenAppearance={onOpenAppearance}
                 />
             ) : path === '/lists' ? (
                 <ListMenuPage
-                    onOpenRankings={() =>
-                        navigate('/rankings')
-                    }
+                    onOpenRankings={() => navigate('/rankings')}
                 />
             ) : path === '/rankings' ? (
                 <RankingsPage
                     lists={workspace.lists}
                     createOpen={createOpen}
-                    onCloseCreate={() =>
-                        setCreateOpen(false)
-                    }
+                    onCloseCreate={() => setCreateOpen(false)}
                     onOpenList={(id) =>
-                        navigate(
-                            '/rankings/' +
-                            encodeURIComponent(id),
-                        )
+                        navigate('/rankings/' + encodeURIComponent(id))
                     }
                     onCreateList={workspace.createList}
                     onRenameList={workspace.renameList}
@@ -139,9 +129,7 @@ function WorkspaceScreen({
                     list={list}
                     catalogItems={workspace.items}
                     createOpen={createOpen}
-                    onCloseCreate={() =>
-                        setCreateOpen(false)
-                    }
+                    onCloseCreate={() => setCreateOpen(false)}
                     getItemName={workspace.getItemName}
                     getItemImageId={workspace.getItemImageId}
                     onAddEntry={(name, position, photo) =>
@@ -159,13 +147,7 @@ function WorkspaceScreen({
                             position,
                         )
                     }
-                    onUpdateEntry={(
-                        id,
-                        name,
-                        position,
-                        photo,
-                        background,
-                    ) =>
+                    onUpdateEntry={(id, name, position, photo, background) =>
                         workspace.updateEntry(
                             list.id,
                             id,
@@ -179,20 +161,14 @@ function WorkspaceScreen({
                         workspace.removeEntry(list.id, id)
                     }
                     onReorderEntry={(id, index) =>
-                        workspace.reorderEntry(
-                            list.id,
-                            id,
-                            index,
-                        )
+                        workspace.reorderEntry(list.id, id, index)
                     }
                 />
             ) : (
                 <main className="page">
                     <h1>Nicht gefunden</h1>
-
                     <p className="field-hint">
-                        Diese Seite oder Liste ist nicht
-                        verfügbar.
+                        Diese Seite oder Liste ist nicht verfügbar.
                     </p>
                 </main>
             )}
@@ -201,6 +177,7 @@ function WorkspaceScreen({
 }
 
 function DeluluApp() {
+    const [appearanceOpen, setAppearanceOpen] = useState(false)
     const navigation = useAppNavigation()
 
     const workspace = useRankingWorkspace({
@@ -210,9 +187,7 @@ function DeluluApp() {
         imageStore: supabaseProfileImageStore,
     })
 
-    const busy =
-        workspace.isLoading || workspace.isSaving
-
+    const busy = workspace.isLoading || workspace.isSaving
     const blocked = busy || workspace.needsReload
 
     const hasFeedback =
@@ -221,10 +196,7 @@ function DeluluApp() {
         workspace.needsReload
 
     const feedback = hasFeedback ? (
-        <section
-            className="app-feedback"
-            aria-label="Datenstatus"
-        >
+        <section className="app-feedback" aria-label="Datenstatus">
             {busy && (
                 <p role="status">
                     {workspace.isLoading
@@ -250,30 +222,35 @@ function DeluluApp() {
     ) : null
 
     return (
-        <ModalFeedbackContext.Provider
-            value={{
-                busy,
-                blocked,
-                content: feedback,
-            }}
-        >
-            <div className="app-shell">
-                {feedback}
+        <>
+            <AppAppearance
+                open={appearanceOpen}
+                onClose={() => setAppearanceOpen(false)}
+                repository={supabaseAppearanceRepository}
+                imageStore={supabaseProfileImageStore}
+            />
 
-                {workspace.hasLoaded && (
-                    <div
-                        inert={blocked}
-                        aria-busy={busy}
-                    >
-                        <WorkspaceScreen
-                            key={navigation.path}
-                            workspace={workspace}
-                            navigation={navigation}
-                        />
-                    </div>
-                )}
-            </div>
-        </ModalFeedbackContext.Provider>
+            <ModalFeedbackContext.Provider
+                value={{ busy, blocked, content: feedback }}
+            >
+                <div className="app-shell">
+                    {feedback}
+
+                    {workspace.hasLoaded && (
+                        <div inert={blocked} aria-busy={busy}>
+                            <WorkspaceScreen
+                                key={navigation.path}
+                                workspace={workspace}
+                                navigation={navigation}
+                                onOpenAppearance={() =>
+                                    setAppearanceOpen(true)
+                                }
+                            />
+                        </div>
+                    )}
+                </div>
+            </ModalFeedbackContext.Provider>
+        </>
     )
 }
 
@@ -286,9 +263,7 @@ function App() {
             path={navigation.path}
             onNavigate={navigation.navigate}
         >
-            <ProfileImageContext.Provider
-                value={supabaseProfileImageStore}
-            >
+            <ProfileImageContext.Provider value={supabaseProfileImageStore}>
                 <DeluluApp />
             </ProfileImageContext.Provider>
         </AuthGate>

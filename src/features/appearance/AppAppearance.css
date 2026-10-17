@@ -1,0 +1,34 @@
+#root {
+    position: relative;
+    z-index: 1;
+}
+
+.app-wallpaper {
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    overflow: hidden;
+    pointer-events: none;
+}
+
+.app-wallpaper::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: rgb(247 245 252 / 78%);
+}
+
+.appearance-preview {
+    width: min(100%, 14rem);
+    height: min(45svh, 20rem);
+    justify-self: center;
+    overflow: hidden;
+    border-radius: 16px;
+    background: var(--accent-bg);
+}
+
+@media (prefers-color-scheme: dark) {
+    .app-wallpaper::after {
+        background: rgb(19 16 25 / 72%);
+    }
+}
