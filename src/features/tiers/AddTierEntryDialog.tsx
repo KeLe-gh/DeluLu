@@ -3,7 +3,7 @@ import type { CatalogItem } from '../catalog'
 import type { TierList } from '../../shared/types/list.types'
 import { Modal } from '../../shared/components/Modal'
 import { PhotoPicker } from '../images/components/PhotoPicker'
-import { ProfilePhoto } from '../images/components/ProfilePhoto'
+import { CatalogProfilePicker } from '../catalog/components/CatalogProfilePicker'
 import type { TierEntryDraft } from './tier.repository'
 
 export function AddTierEntryDialog({
@@ -18,15 +18,12 @@ export function AddTierEntryDialog({
     onClose: () => void
 }) {
     const nameId = useId()
-    const profileId = useId()
-    const searchId = useId()
 
     const [entryId] = useState(() => crypto.randomUUID())
     const [newItemId] = useState(() => crypto.randomUUID())
     const [mode, setMode] = useState<'new' | 'catalog'>('new')
     const [name, setName] = useState('')
     const [itemId, setItemId] = useState('')
-    const [search, setSearch] = useState('')
     const [photo, setPhoto] = useState<Blob | null>(null)
     const [preparing, setPreparing] = useState(false)
     const [pending, setPending] = useState(false)
@@ -41,13 +38,7 @@ export function AddTierEntryDialog({
         .filter((item) => !used.has(item.id))
         .sort((a, b) => a.name.localeCompare(b.name, 'de-CH'))
 
-    const query = search.trim().toLocaleLowerCase('de-CH')
-
-    const filtered = available.filter((item) =>
-        item.name.toLocaleLowerCase('de-CH').includes(query),
-    )
-
-    const selected = filtered.find((item) => item.id === itemId)
+    const selected = available.find((item) => item.id === itemId)
     const targetId = mode === 'new' ? newItemId : itemId
 
     const alreadyAdded = list.entries.some((entry) =>
@@ -171,63 +162,15 @@ export function AddTierEntryDialog({
                         />
                     </>
                 ) : (
-                    <>
-                        <div>
-                            <label htmlFor={searchId}>
-                                Profile suchen
-                            </label>
-
-                            <input
-                                id={searchId}
-                                type="search"
-                                autoComplete="off"
-                                placeholder="Name eingeben …"
-                                value={search}
-                                onChange={(event) => {
-                                    setSearch(event.target.value)
-                                    setItemId('')
-                                    setError('')
-                                }}
-                            />
-                        </div>
-
-                        <div>
-                            <label htmlFor={profileId}>Profil</label>
-
-                            <select
-                                id={profileId}
-                                value={selected?.id ?? ''}
-                                required
-                                disabled={filtered.length === 0}
-                                onChange={(event) =>
-                                    setItemId(event.target.value)
-                                }
-                            >
-                                <option value="">Auswählen</option>
-
-                                {filtered.map((item) => (
-                                    <option key={item.id} value={item.id}>
-                                        {item.name}
-                                    </option>
-                                ))}
-                            </select>
-
-                            {filtered.length === 0 && (
-                                <p className="field-hint">
-                                    {available.length === 0
-                                        ? 'Keine weiteren Profile verfügbar.'
-                                        : 'Keine passenden Profile.'}
-                                </p>
-                            )}
-                        </div>
-
-                        {selected && (
-                            <ProfilePhoto
-                                imageId={selected.profileImageId}
-                                name={selected.name}
-                            />
-                        )}
-                    </>
+                    <CatalogProfilePicker
+                        items={available}
+                        value={itemId}
+                        disabled={pending || preparing}
+                        onChange={(id) => {
+                            setItemId(id)
+                            setError('')
+                        }}
+                    />
                 )}
 
                 {error && <p role="alert">{error}</p>}

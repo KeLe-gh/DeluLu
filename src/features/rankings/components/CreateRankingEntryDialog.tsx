@@ -6,7 +6,7 @@ import type {
 } from '../../../shared/types/list.types'
 import { getRankingSize } from '../model/ranking.operations'
 import { PhotoPicker } from '../../images/components/PhotoPicker'
-import { ProfilePhoto } from '../../images/components/ProfilePhoto'
+import { CatalogProfilePicker } from '../../catalog/components/CatalogProfilePicker'
 
 interface CreateRankingEntryDialogProps {
     list: RankingList
@@ -37,7 +37,6 @@ export function CreateRankingEntryDialog({
     const [mode, setMode] = useState<'new' | 'existing'>('new')
     const [name, setName] = useState('')
     const [itemId, setItemId] = useState('')
-    const [search, setSearch] = useState('')
     const [position, setPosition] = useState(
         String(getRankingSize(list) + 1),
     )
@@ -55,13 +54,7 @@ export function CreateRankingEntryDialog({
         .filter((item) => !usedIds.has(item.id))
         .sort((a, b) => a.name.localeCompare(b.name, 'de-CH'))
 
-    const query = search.trim().toLocaleLowerCase('de-CH')
-
-    const filtered = available.filter((item) =>
-        item.name.toLocaleLowerCase('de-CH').includes(query),
-    )
-
-    const selected = filtered.find((item) => item.id === itemId)
+    const selected = available.find((item) => item.id === itemId)
 
     async function save() {
         if (pendingRef.current || preparingPhoto) return
@@ -145,7 +138,9 @@ export function CreateRankingEntryDialog({
 
                 {mode === 'new' ? (
                     <div>
-                        <label htmlFor="new-entry-name">Name</label>
+                        <label htmlFor="new-entry-name">
+                            Name
+                        </label>
 
                         <input
                             id="new-entry-name"
@@ -160,74 +155,26 @@ export function CreateRankingEntryDialog({
                         />
                     </div>
                 ) : (
-                    <>
-                        <div>
-                            <label htmlFor="new-entry-search">
-                                Profile suchen
-                            </label>
-
-                            <input
-                                id="new-entry-search"
-                                type="search"
-                                autoComplete="off"
-                                placeholder="Name eingeben …"
-                                value={search}
-                                onChange={(event) => {
-                                    setSearch(event.target.value)
-                                    setItemId('')
-                                    setError('')
-                                }}
-                            />
-                        </div>
-
-                        <div>
-                            <label htmlFor="new-entry-profile">
-                                Profil
-                            </label>
-
-                            <select
-                                id="new-entry-profile"
-                                value={selected?.id ?? ''}
-                                onChange={(event) =>
-                                    setItemId(event.target.value)
-                                }
-                                disabled={
-                                    pending || filtered.length === 0
-                                }
-                                required
-                            >
-                                <option value="">Auswählen</option>
-
-                                {filtered.map((item) => (
-                                    <option key={item.id} value={item.id}>
-                                        {item.name}
-                                    </option>
-                                ))}
-                            </select>
-
-                            {filtered.length === 0 && (
-                                <p className="field-hint">
-                                    {available.length === 0
-                                        ? 'Keine weiteren Profile verfügbar.'
-                                        : 'Keine passenden Profile.'}
-                                </p>
-                            )}
-                        </div>
-                    </>
+                    <CatalogProfilePicker
+                        items={available}
+                        value={itemId}
+                        disabled={pending || preparingPhoto}
+                        onChange={(id) => {
+                            setItemId(id)
+                            setError('')
+                        }}
+                    />
                 )}
 
                 {mode === 'new' ? (
                     <PhotoPicker
                         imageId={null}
                         value={photo}
-                        onChange={(value) => setPhoto(value ?? null)}
+                        onChange={(value) =>
+                            setPhoto(value ?? null)
+                        }
                         onBusyChange={setPreparingPhoto}
                         name={name}
-                    />
-                ) : selected ? (
-                    <ProfilePhoto
-                        imageId={selected.profileImageId}
-                        name={selected.name}
                     />
                 ) : null}
 

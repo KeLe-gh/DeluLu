@@ -1,0 +1,82 @@
+.catalog-picker-dialog {
+    top: max(16px, min(12dvh, 100px));
+    bottom: auto;
+    margin-block: 0;
+    max-height: 84dvh;
+}
+
+.catalog-picker > span {
+    font-weight: 600;
+}
+
+.modal button.catalog-picker__trigger {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    min-width: 0;
+    text-align: left;
+}
+
+.catalog-picker__trigger > span:nth-last-child(2) {
+    flex: 1;
+    min-width: 0;
+    overflow-wrap: anywhere;
+}
+
+.catalog-picker__trigger > .profile-photo {
+    flex: 0 0 36px;
+    width: 36px;
+    height: 36px;
+    border-radius: 9px;
+}
+
+.catalog-picker-dialog .catalog-picker__results {
+    max-height: min(42dvh, 320px);
+    min-height: 64px;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin: 12px 0 0;
+    padding: 3px;
+    list-style: none;
+}
+
+.catalog-picker__results > li {
+    flex-shrink: 0;
+    min-width: 0;
+}
+
+.modal button.catalog-picker__choice {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+    min-width: 0;
+    min-height: 64px;
+    padding: 8px;
+    text-align: left;
+}
+
+.catalog-picker__choice > span:nth-child(2) {
+    flex: 1;
+    min-width: 0;
+    overflow-wrap: anywhere;
+}
+
+.catalog-picker__choice[aria-pressed='true'] {
+    border-color: var(--accent);
+    background: var(--accent-bg);
+}
+
+.catalog-picker__check {
+    color: var(--accent);
+    font-weight: 700;
+}
+
+.catalog-picker__empty {
+    padding: 16px 4px;
+    color: var(--muted);
+}
