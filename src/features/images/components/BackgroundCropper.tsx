@@ -1,6 +1,7 @@
 import { useEffect, useId, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { Modal } from '../../../shared/components/Modal'
+import { createSoftBackdrop } from '../model/createSoftBackdrop'
 import './BackgroundCropper.css'
 
 const clamp = (value: number) => Math.max(0, Math.min(1, value))
@@ -17,7 +18,31 @@ export function BackgroundCropper({
     aspectRatio?: number
 }) {
     const zoomId = useId()
-    const [image, setImage] = useState<HTMLImageElement | null>(null)
+
+    const [loaded, setLoaded] = useState<{
+        image: HTMLImageElement
+        backdrop: HTMLCanvasElement
+        backdropUrl: string
+    } | null>(null)
+
+    const image = loaded?.image ?? null
+
+    const minimumZoom = image
+        ? Math.max(
+            0.01,
+            Math.floor(
+                Math.min(
+                    1,
+                    image.naturalWidth /
+                    image.naturalHeight /
+                    aspectRatio,
+                    aspectRatio /
+                    (image.naturalWidth / image.naturalHeight),
+                ) * 100,
+            ) / 100,
+        )
+        : 1
+
     const [zoom, setZoom] = useState(1)
     const [position, setPosition] = useState({ x: 0.5, y: 0.5 })
     const [error, setError] = useState('')
@@ -36,7 +61,24 @@ export function BackgroundCropper({
         let active = true
 
         photo.onload = () => {
-            if (active) setImage(photo)
+            if (!active) return
+
+            try {
+                const backdrop = createSoftBackdrop(
+                    photo,
+                    aspectRatio,
+                )
+
+                setLoaded({
+                    image: photo,
+                    backdrop,
+                    backdropUrl: backdrop.toDataURL(),
+                })
+            } catch {
+                setError(
+                    'Das Foto konnte nicht verarbeitet werden.',
+                )
+            }
         }
 
         photo.onerror = () => {
@@ -54,7 +96,7 @@ export function BackgroundCropper({
             photo.src = ''
             URL.revokeObjectURL(url)
         }
-    }, [file])
+    }, [file, aspectRatio])
 
     function moveBy(
         dx: number,
@@ -75,17 +117,19 @@ export function BackgroundCropper({
             image.naturalHeight * scale - frame.clientHeight
 
         setPosition((current) => ({
-            x: overflowX > 0.5
+            x: Math.abs(overflowX) > 0.5
                 ? clamp(current.x - dx / overflowX)
                 : 0.5,
-            y: overflowY > 0.5
+            y: Math.abs(overflowY) > 0.5
                 ? clamp(current.y - dy / overflowY)
                 : 0.5,
         }))
     }
 
     async function confirm() {
-        if (!image || savingRef.current) return
+        if (!loaded || savingRef.current) return
+
+        const { image, backdrop } = loaded
 
         savingRef.current = true
         setSaving(true)
@@ -123,19 +167,27 @@ export function BackgroundCropper({
                 )
             }
 
-            context.fillStyle = '#342d40'
-            context.fillRect(0, 0, canvas.width, canvas.height)
+            context.imageSmoothingEnabled = true
+            context.imageSmoothingQuality = 'high'
 
             context.drawImage(
-                image,
-                (image.naturalWidth - cropWidth) * position.x,
-                (image.naturalHeight - cropHeight) * position.y,
-                cropWidth,
-                cropHeight,
+                backdrop,
                 0,
                 0,
                 canvas.width,
                 canvas.height,
+            )
+
+            const renderScale = canvas.width / cropWidth
+            const width = image.naturalWidth * renderScale
+            const height = image.naturalHeight * renderScale
+
+            context.drawImage(
+                image,
+                (canvas.width - width) * position.x,
+                (canvas.height - height) * position.y,
+                width,
+                height,
             )
 
             const photo = await new Promise<Blob | null>((resolve) => {
@@ -248,6 +300,17 @@ export function BackgroundCropper({
                         moveBy(...move, event.currentTarget)
                     }}
                 >
+                    {loaded && (
+                        <span
+                            className="background-cropper__backdrop"
+                            aria-hidden="true"
+                            style={{
+                                backgroundImage:
+                                    `url("${loaded.backdropUrl}")`,
+                            }}
+                        />
+                    )}
+
                     {image && (
                         <img
                             src={image.src}
@@ -282,7 +345,7 @@ export function BackgroundCropper({
                 <input
                     id={zoomId}
                     type="range"
-                    min="1"
+                    min={minimumZoom}
                     max="3"
                     step="0.01"
                     value={zoom}
@@ -291,6 +354,17 @@ export function BackgroundCropper({
                         setZoom(Number(event.target.value))
                     }}
                 />
+
+                <button
+                    type="button"
+                    disabled={!image || saving}
+                    onClick={() => {
+                        setZoom(minimumZoom)
+                        setPosition({ x: 0.5, y: 0.5 })
+                    }}
+                >
+                    Gesamtes Foto
+                </button>
 
                 {error && <p role="alert">{error}</p>}
 
