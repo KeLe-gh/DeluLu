@@ -39,7 +39,7 @@ export interface MediaRepository {
 
 export function mediaStatusFromPath(path: string): MediaStatus {
     return mediaStatuses.find(
-        (status) => path === '/media/' + status,
+        (status) => status === path.split('/')[2],
     ) ?? 'watchlist'
 }
 

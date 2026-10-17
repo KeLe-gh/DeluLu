@@ -113,6 +113,30 @@ export type AppDatabase = Omit<Database, 'public'> & {
         }
 
         Tables: Database['public']['Tables'] & {
+            media_thoughts: {
+                Row: {
+                    id: string
+                    owner_id: string
+                    title_id: string
+                    heading: string
+                    body: string
+                    revision: number
+                    created_at: string
+                    updated_at: string
+                }
+                Insert: {
+                    id: string
+                    title_id: string
+                    heading?: string
+                    body: string
+                }
+                Update: {
+                    heading?: string
+                    body?: string
+                }
+                Relationships: []
+            }
+
             media_titles: {
                 Row: {
                     id: string

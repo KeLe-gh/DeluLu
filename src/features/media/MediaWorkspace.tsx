@@ -4,6 +4,7 @@ import { useAppNavigation } from '../../app/hooks/useAppNavigation'
 import { supabaseMediaRepository } from '../../infrastructure/supabase/supabaseMediaRepository'
 import { ModalFeedbackContext } from '../../shared/components/ModalFeedbackContext'
 import { MediaTitleDialog } from './MediaTitleDialog'
+import { MediaThoughts } from './MediaThoughts'
 import { MediaSwipeRow } from './MediaSwipeRow'
 import type { MediaAction } from './MediaSwipeRow'
 import type {
@@ -32,6 +33,14 @@ export function MediaScreen({
 }) {
     const workspace = useMediaTitles(repository)
     const status = mediaStatusFromPath(path)
+
+    const detailId = path.match(
+        /^\/media\/(?:watchlist|watching|watched|dropped)\/([^/]+)$/,
+    )?.[1]
+
+    const selectedTitle = workspace.titles.find(
+        (title) => title.id === detailId,
+    )
 
     const [dialog, setDialog] = useState<{
         title?: MediaTitle
@@ -108,6 +117,44 @@ export function MediaScreen({
         return result
     }
 
+    if (detailId && workspace.loaded) {
+        return (
+            <ModalFeedbackContext.Provider
+                value={{ busy, blocked, content: feedback }}
+            >
+                <div className="app-shell">
+                    {feedback}
+
+                    <div inert={blocked} aria-busy={busy}>
+                        {selectedTitle ? (
+                            <MediaThoughts
+                                key={selectedTitle.id}
+                                title={selectedTitle}
+                                onHome={() => onNavigate('/')}
+                                onBack={() =>
+                                    onBack('/media/' + status)
+                                }
+                            />
+                        ) : (
+                            <>
+                                <AppHeader
+                                    onHome={() => onNavigate('/')}
+                                    onBack={() =>
+                                        onBack('/media/' + status)
+                                    }
+                                />
+
+                                <main className="page">
+                                    <h1>Eintrag nicht verfügbar</h1>
+                                </main>
+                            </>
+                        )}
+                    </div>
+                </div>
+            </ModalFeedbackContext.Provider>
+        )
+    }
+
     return (
         <ModalFeedbackContext.Provider
             value={{ busy, blocked, content: feedback }}
@@ -164,7 +211,21 @@ export function MediaScreen({
                                                 name={title.name}
                                                 actions={actions(title)}
                                             >
-                                                <div className="media-title">
+                                                <button
+                                                    type="button"
+                                                    className="media-title"
+                                                    aria-label={
+                                                        title.name + ' öffnen'
+                                                    }
+                                                    onClick={() =>
+                                                        onNavigate(
+                                                            '/media/' +
+                                                            status +
+                                                            '/' +
+                                                            title.id,
+                                                        )
+                                                    }
+                                                >
                                                     <div className="media-title__text">
                                                         <strong>
                                                             {title.name}
@@ -195,7 +256,7 @@ export function MediaScreen({
                                                             <small>/10</small>
                                                         </span>
                                                     )}
-                                                </div>
+                                                </button>
                                             </MediaSwipeRow>
                                         </li>
                                     ))}

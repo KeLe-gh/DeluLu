@@ -121,3 +121,98 @@
         transition: none;
     }
 }
+.media-title {
+    border: 0;
+    background: transparent;
+    color: var(--text);
+    font: inherit;
+    text-align: left;
+}
+
+.media-detail-heading {
+    display: grid;
+    gap: 8px;
+    margin-bottom: 24px;
+    overflow-wrap: anywhere;
+}
+
+.media-detail-heading > p {
+    color: var(--muted);
+    font-size: 0.875rem;
+}
+
+.thought-list {
+    display: grid;
+    gap: 14px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.thought-list > li {
+    min-width: 0;
+}
+
+.thought-card {
+    padding: 16px;
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    background: var(--surface);
+    overflow-wrap: anywhere;
+}
+
+.thought-card h3 {
+    margin: 0 0 6px;
+    font-size: 1rem;
+}
+
+.thought-card time {
+    color: var(--muted);
+    font-size: 0.75rem;
+}
+
+.thought-body {
+    margin-top: 12px;
+    white-space: pre-wrap;
+}
+
+.thought-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    margin-top: 12px;
+}
+
+.thought-actions button {
+    min-height: 44px;
+    padding: 6px 10px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: var(--surface);
+    color: var(--text);
+    font-size: 0.8rem;
+}
+
+.modal textarea {
+    width: 100%;
+    min-width: 0;
+    min-height: 160px;
+    padding: 12px;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    background: var(--surface);
+    color: var(--text);
+    font: inherit;
+    font-size: 16px;
+    resize: vertical;
+}
+
+.modal textarea:focus-visible {
+    outline: 3px solid var(--accent);
+    outline-offset: 3px;
+}
+
+.modal button.media-delete {
+    background: #b42338;
+    color: #fff;
+}

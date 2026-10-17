@@ -11,6 +11,24 @@ export function HomePage({
                          }: HomePageProps) {
     const { navigate } = useAppNavigation()
 
+    const sections = [
+        {
+            label: 'Listen',
+            icon: '☷',
+            open: onOpenLists,
+        },
+        {
+            label: 'Serien/Filme',
+            icon: '▻',
+            open: () => navigate('/media/watchlist'),
+        },
+        {
+            label: 'Katalog',
+            icon: '♙',
+            open: onOpenCatalog,
+        },
+    ]
+
     return (
         <main className="page">
             <div className="page-heading">
@@ -18,71 +36,30 @@ export function HomePage({
             </div>
 
             <nav className="feature-grid" aria-label="Bereiche">
-                <button
-                    type="button"
-                    className="feature-card"
-                    onClick={onOpenLists}
-                >
-                    <span
-                        className="feature-card__icon"
-                        aria-hidden="true"
+                {sections.map((section) => (
+                    <button
+                        key={section.label}
+                        type="button"
+                        className="feature-card"
+                        onClick={section.open}
                     >
-                        ☷
-                    </span>
+                        <span
+                            className="feature-card__icon"
+                            aria-hidden="true"
+                        >
+                            {section.icon}
+                        </span>
 
-                    <span>Listen</span>
+                        <span>{section.label}</span>
 
-                    <span
-                        className="feature-card__arrow"
-                        aria-hidden="true"
-                    >
-                        ›
-                    </span>
-                </button>
-
-                <button
-                    type="button"
-                    className="feature-card"
-                    onClick={onOpenCatalog}
-                >
-                    <span
-                        className="feature-card__icon"
-                        aria-hidden="true"
-                    >
-                        ♙
-                    </span>
-
-                    <span>Katalog</span>
-
-                    <span
-                        className="feature-card__arrow"
-                        aria-hidden="true"
-                    >
-                        ›
-                    </span>
-                </button>
-
-                <button
-                    type="button"
-                    className="feature-card"
-                    onClick={() => navigate('/media/watchlist')}
-                >
-                    <span
-                        className="feature-card__icon"
-                        aria-hidden="true"
-                    >
-                        ▻
-                    </span>
-
-                    <span>Serien/Filme</span>
-
-                    <span
-                        className="feature-card__arrow"
-                        aria-hidden="true"
-                    >
-                        ›
-                    </span>
-                </button>
+                        <span
+                            className="feature-card__arrow"
+                            aria-hidden="true"
+                        >
+                            ›
+                        </span>
+                    </button>
+                ))}
             </nav>
         </main>
     )
