@@ -19,12 +19,14 @@ export function AddTierEntryDialog({
 }) {
     const nameId = useId()
     const profileId = useId()
+    const searchId = useId()
 
     const [entryId] = useState(() => crypto.randomUUID())
     const [newItemId] = useState(() => crypto.randomUUID())
     const [mode, setMode] = useState<'new' | 'catalog'>('new')
     const [name, setName] = useState('')
     const [itemId, setItemId] = useState('')
+    const [search, setSearch] = useState('')
     const [photo, setPhoto] = useState<Blob | null>(null)
     const [preparing, setPreparing] = useState(false)
     const [pending, setPending] = useState(false)
@@ -39,16 +41,23 @@ export function AddTierEntryDialog({
         .filter((item) => !used.has(item.id))
         .sort((a, b) => a.name.localeCompare(b.name, 'de-CH'))
 
-    const selected = available.find((item) => item.id === itemId)
+    const query = search.trim().toLocaleLowerCase('de-CH')
+
+    const filtered = available.filter((item) =>
+        item.name.toLocaleLowerCase('de-CH').includes(query),
+    )
+
+    const selected = filtered.find((item) => item.id === itemId)
+    const targetId = mode === 'new' ? newItemId : itemId
+
+    const alreadyAdded = list.entries.some((entry) =>
+        entry.id === entryId && entry.itemId === targetId,
+    )
 
     async function save() {
         if (pendingRef.current || preparing) return
 
-        const targetId = mode === 'new' ? newItemId : itemId
-
-        if (list.entries.some((entry) =>
-            entry.id === entryId && entry.itemId === targetId,
-        )) {
+        if (alreadyAdded) {
             onClose()
             return
         }
@@ -164,29 +173,50 @@ export function AddTierEntryDialog({
                 ) : (
                     <>
                         <div>
+                            <label htmlFor={searchId}>
+                                Profile suchen
+                            </label>
+
+                            <input
+                                id={searchId}
+                                type="search"
+                                autoComplete="off"
+                                placeholder="Name eingeben …"
+                                value={search}
+                                onChange={(event) => {
+                                    setSearch(event.target.value)
+                                    setItemId('')
+                                    setError('')
+                                }}
+                            />
+                        </div>
+
+                        <div>
                             <label htmlFor={profileId}>Profil</label>
 
                             <select
                                 id={profileId}
-                                value={itemId}
+                                value={selected?.id ?? ''}
                                 required
-                                disabled={available.length === 0}
+                                disabled={filtered.length === 0}
                                 onChange={(event) =>
                                     setItemId(event.target.value)
                                 }
                             >
                                 <option value="">Auswählen</option>
 
-                                {available.map((item) => (
+                                {filtered.map((item) => (
                                     <option key={item.id} value={item.id}>
                                         {item.name}
                                     </option>
                                 ))}
                             </select>
 
-                            {available.length === 0 && (
+                            {filtered.length === 0 && (
                                 <p className="field-hint">
-                                    Keine weiteren Profile verfügbar.
+                                    {available.length === 0
+                                        ? 'Keine weiteren Profile verfügbar.'
+                                        : 'Keine passenden Profile.'}
                                 </p>
                             )}
                         </div>
@@ -207,7 +237,7 @@ export function AddTierEntryDialog({
                     disabled={
                         pending ||
                         preparing ||
-                        (mode === 'catalog' && available.length === 0)
+                        (mode === 'catalog' && !selected && !alreadyAdded)
                     }
                 >
                     {pending ? 'Speichern …' : 'Hinzufügen'}
