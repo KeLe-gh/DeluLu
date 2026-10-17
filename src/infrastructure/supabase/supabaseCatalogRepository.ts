@@ -1,4 +1,4 @@
-import type { CatalogRepository } from '../../features/catalog'
+import type { CatalogManagerRepository } from '../../features/catalog/model/catalogManager.repository'
 import { RevisionConflictError } from '../../shared/errors/persistence.errors'
 import { supabase } from './client'
 import { mapCatalogItem } from './database.mappers'
@@ -8,7 +8,7 @@ import { readAllRows } from './readAllRows'
 type CatalogRow =
     Database['public']['Tables']['catalog_items']['Row']
 
-export const supabaseCatalogRepository: CatalogRepository = {
+export const supabaseCatalogRepository: CatalogManagerRepository = {
     async getAll() {
         const rows = await readAllRows<CatalogRow>(
             (afterId, pageSize) => {
@@ -59,5 +59,27 @@ export const supabaseCatalogRepository: CatalogRepository = {
         }
 
         return mapCatalogItem(data)
+    },
+
+    async remove(id, expectedRevision) {
+        const { data, error } = await supabase.rpc(
+            'delete_catalog_item',
+            {
+                p_id: id,
+                p_expected_revision: expectedRevision,
+            },
+        )
+
+        if (error?.code === 'PT409') {
+            throw new RevisionConflictError()
+        }
+
+        if (error) throw error
+
+        if (data !== true) {
+            throw new Error(
+                'Das Profil konnte nicht gelöscht werden.',
+            )
+        }
     },
 }

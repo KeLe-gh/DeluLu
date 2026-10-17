@@ -19,6 +19,10 @@ import { supabaseTierRepository } from './infrastructure/supabase/supabaseTierRe
 import { ModalFeedbackContext } from './shared/components/ModalFeedbackContext'
 import './App.css'
 
+const CatalogWorkspace = lazy(
+    () => import('./features/catalog/CatalogWorkspace'),
+)
+
 const TierWorkspace = lazy(
     () => import('./features/tiers/TierWorkspace'),
 )
@@ -73,6 +77,7 @@ function WorkspaceScreen({
             {path === '/' ? (
                 <HomePage
                     onOpenLists={() => navigate('/lists')}
+                    onOpenCatalog={() => navigate('/catalog')}
                 />
             ) : path === '/lists' ? (
                 <ListMenuPage
@@ -212,6 +217,23 @@ function RankingApp() {
 function DeluluApp() {
     const navigation = useAppNavigation()
 
+    if (navigation.path === '/catalog') {
+        return (
+            <Suspense fallback={
+                          <main className="page">
+                              <p role="status">Katalog wird geladen …</p>
+                          </main>
+                      }>
+                <CatalogWorkspace
+                    repository={supabaseCatalogRepository}
+                    imageStore={supabaseProfileImageStore}
+                    onNavigate={navigation.navigate}
+                    onBack={navigation.back}
+                />
+            </Suspense>
+        )
+    }
+
     if (
         navigation.path === '/tiers' ||
         navigation.path.startsWith('/tiers/')
@@ -219,9 +241,7 @@ function DeluluApp() {
         return (
             <Suspense fallback={
                           <main className="page">
-                              <p role="status">
-                                  Tierlisten werden geladen …
-                              </p>
+                              <p role="status">Tierlisten werden geladen …</p>
                           </main>
                       }>
                 <TierWorkspace
@@ -248,7 +268,9 @@ function App() {
             path={navigation.path}
             onNavigate={navigation.navigate}
             accountActions={
-                <ProfileImageContext.Provider value={supabaseProfileImageStore}>
+                <ProfileImageContext.Provider
+                    value={supabaseProfileImageStore}
+                >
                     <AppAppearance
                         repository={supabaseAppearanceRepository}
                         imageStore={supabaseProfileImageStore}
@@ -256,7 +278,9 @@ function App() {
                 </ProfileImageContext.Provider>
             }
         >
-            <ProfileImageContext.Provider value={supabaseProfileImageStore}>
+            <ProfileImageContext.Provider
+                value={supabaseProfileImageStore}
+            >
                 <DeluluApp />
             </ProfileImageContext.Provider>
         </AuthGate>

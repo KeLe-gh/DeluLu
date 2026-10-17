@@ -1,8 +1,12 @@
 interface HomePageProps {
     onOpenLists: () => void
+    onOpenCatalog: () => void
 }
 
-export function HomePage({ onOpenLists }: HomePageProps) {
+export function HomePage({
+                             onOpenLists,
+                             onOpenCatalog,
+                         }: HomePageProps) {
     return (
         <main className="page">
             <div className="page-heading">
@@ -23,6 +27,28 @@ export function HomePage({ onOpenLists }: HomePageProps) {
                     </span>
 
                     <span>Listen</span>
+
+                    <span
+                        className="feature-card__arrow"
+                        aria-hidden="true"
+                    >
+                        ›
+                    </span>
+                </button>
+
+                <button
+                    type="button"
+                    className="feature-card"
+                    onClick={onOpenCatalog}
+                >
+                    <span
+                        className="feature-card__icon"
+                        aria-hidden="true"
+                    >
+                        ♙
+                    </span>
+
+                    <span>Katalog</span>
 
                     <span
                         className="feature-card__arrow"
