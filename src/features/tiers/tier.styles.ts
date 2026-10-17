@@ -1,4 +1,4 @@
-export type TierStyleId = 'classic'
+export type TierStyleId = 'classic' | 'cake'
 
 export interface TierStyle {
     id: TierStyleId
@@ -22,5 +22,10 @@ export const tierStyles: readonly TierStyle[] = [
             { label: 'E', color: '#7f7fff' },
             { label: 'F', color: '#ff7fff' },
         ],
+    },
+    {
+        id: 'cake',
+        name: 'Hear me out cake',
+        rows: [],
     },
 ]

@@ -5,7 +5,7 @@ import { ModalFeedbackContext } from '../../shared/components/ModalFeedbackConte
 import { AppHeader } from '../../app/AppHeader'
 import { AddTierEntryDialog } from './AddTierEntryDialog'
 import { CreateTierListDialog } from './CreateTierListDialog'
-import { TierBoard } from './TierBoard'
+import { TierListView as TierBoard } from './TierListView'
 import type { TierRepository } from './tier.repository'
 import { useTierLists } from './useTierLists'
 import './Tiers.css'

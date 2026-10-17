@@ -1,0 +1,67 @@
+.hear-me-out-cake {
+    margin: 0;
+    padding: 12px 0;
+    width: 100%;
+}
+
+.cake-stage {
+    position: relative;
+    width: 100%;
+    max-width: 560px;
+    margin-inline: auto;
+    isolation: isolate;
+}
+
+.cake-base {
+    position: absolute;
+    inset: auto 0 0;
+    z-index: 0;
+}
+
+.cake-base > svg {
+    display: block;
+    width: 100%;
+    height: auto;
+}
+
+.cake-sticks {
+    position: absolute;
+    inset: 0;
+    display: block;
+    width: 100%;
+    height: 100%;
+    z-index: 1;
+    pointer-events: none;
+}
+
+.cake-pin {
+    position: absolute;
+    width: 16%;
+    aspect-ratio: 1;
+    padding: 3px 3px 7px;
+    border-radius: 3px;
+    background: #fffaf3;
+    box-shadow: 0 2px 5px #25162635;
+    transform-origin: 50% 100%;
+}
+
+.cake-pin .profile-photo {
+    display: grid;
+    width: 100%;
+    height: 100%;
+    border-radius: 1px;
+    font-size: clamp(1rem, 5vw, 1.8rem);
+}
+
+.cake-pin .profile-photo img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.cake-style-preview {
+    display: block;
+    width: 100%;
+    height: auto;
+    max-height: 140px;
+}

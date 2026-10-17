@@ -1,5 +1,6 @@
 import { useId, useRef, useState } from 'react'
 import { Modal } from '../../shared/components/Modal'
+import { CakeArtwork } from './HearMeOutCake'
 import type { CreateTierListInput } from './tier.repository'
 import { tierStyles } from './tier.styles'
 import type { TierStyleId } from './tier.styles'
@@ -46,9 +47,7 @@ export function CreateTierListDialog({
             if (await onCreate({ id, title, styleId })) {
                 onClose()
             } else {
-                setError(
-                    'Die Tierliste konnte nicht erstellt werden.',
-                )
+                setError('Die Tierliste konnte nicht erstellt werden.')
             }
         } catch {
             setError(
@@ -66,10 +65,12 @@ export function CreateTierListDialog({
             busy={pending}
             onClose={onClose}
         >
-            <form onSubmit={(event) => {
-                event.preventDefault()
-                void submit()
-            }}>
+            <form
+                onSubmit={(event) => {
+                    event.preventDefault()
+                    void submit()
+                }}
+            >
                 {step === 'name' ? (
                     <div>
                         <label htmlFor={nameId}>Name</label>
@@ -101,25 +102,30 @@ export function CreateTierListDialog({
                             >
                                 <span>{style.name}</span>
 
-                                <span
-                                    className="tier-style-preview"
-                                    aria-hidden="true"
-                                >
-                                    {style.rows.map((row) => (
-                                        <span
-                                            className="tier-style-preview__row"
-                                            key={row.label}
-                                        >
-                                            <span
-                                                style={{
-                                                    background: row.color,
-                                                }}
-                                            >
-                                                {row.label}
-                                            </span>
-                                            <span />
+                                <span aria-hidden="true">
+                                    {style.id === 'cake' ? (
+                                        <CakeArtwork
+                                            className="cake-style-preview"
+                                        />
+                                    ) : (
+                                        <span className="tier-style-preview">
+                                            {style.rows.map((row) => (
+                                                <span
+                                                    className="tier-style-preview__row"
+                                                    key={row.label}
+                                                >
+                                                    <span
+                                                        style={{
+                                                            background: row.color,
+                                                        }}
+                                                    >
+                                                        {row.label}
+                                                    </span>
+                                                    <span />
+                                                </span>
+                                            ))}
                                         </span>
-                                    ))}
+                                    )}
                                 </span>
                             </button>
                         ))}

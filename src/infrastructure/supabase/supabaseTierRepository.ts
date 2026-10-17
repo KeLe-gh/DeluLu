@@ -21,7 +21,11 @@ function mapList(
         .sort((a, b) => a.position - b.position)
         .map(({ id, label, color }) => ({ id, label, color }))
 
-    if (tiers.length !== 7) {
+    if (
+        (row.style_id === 'classic' && tiers.length !== 7) ||
+        (row.style_id === 'cake' && tiers.length !== 0) ||
+        !['classic', 'cake'].includes(row.style_id)
+    ) {
         throw new Error('Die Tierliste ist unvollständig.')
     }
 
