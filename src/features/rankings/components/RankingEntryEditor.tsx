@@ -4,6 +4,7 @@ import { PhotoPicker } from '../../images/components/PhotoPicker'
 import type { PhotoChange } from '../../images/model/profileImageStore'
 
 interface RankingEntryEditorProps {
+    canEditProfile?: boolean
     name: string
     position: number
     imageId: string | null
@@ -19,6 +20,7 @@ interface RankingEntryEditorProps {
 }
 
 export function RankingEntryEditor({
+                                       canEditProfile = true,
                                        name,
                                        position,
                                        imageId,
@@ -33,10 +35,10 @@ export function RankingEntryEditor({
     const [preparingPhoto, setPreparingPhoto] = useState(false)
     const [background, setBackground] = useState<PhotoChange>(undefined)
     const [preparingBackground, setPreparingBackground] = useState(false)
-    const preparing = preparingPhoto || preparingBackground
     const [error, setError] = useState('')
     const [pending, setPending] = useState(false)
     const pendingRef = useRef(false)
+    const preparing = preparingPhoto || preparingBackground
 
     async function perform(
         action: () => Promise<boolean>,
@@ -94,7 +96,8 @@ export function RankingEntryEditor({
                     <input
                         id="edit-entry-name"
                         type="text"
-                        autoFocus
+                        autoFocus={canEditProfile}
+                        readOnly={!canEditProfile}
                         value={editedName}
                         onChange={(event) => setEditedName(event.target.value)}
                         disabled={pending}
@@ -106,6 +109,7 @@ export function RankingEntryEditor({
                     <label htmlFor="edit-entry-position">Position</label>
                     <input
                         id="edit-entry-position"
+                        autoFocus={!canEditProfile}
                         type="number"
                         min="1"
                         step="1"
@@ -116,26 +120,31 @@ export function RankingEntryEditor({
                     />
                 </div>
 
-                <PhotoPicker
-                    imageId={imageId}
-                    value={photo}
-                    onChange={setPhoto}
-                    onBusyChange={setPreparingPhoto}
-                    name={editedName}
-                />
-
-                <PhotoPicker
-                    kind="background"
-                    imageId={backgroundImageId}
-                    value={background}
-                    onChange={setBackground}
-                    onBusyChange={setPreparingBackground}
-                    name={editedName}
-                />
-
-                <p className="field-hint">
-                    Name und Bilder gelten in allen Listen mit diesem Profil.
-                </p>
+                {canEditProfile ? <>
+                    <PhotoPicker
+                        imageId={imageId}
+                        value={photo}
+                        onChange={setPhoto}
+                        onBusyChange={setPreparingPhoto}
+                        name={editedName}
+                    />
+                    <PhotoPicker
+                        kind="background"
+                        imageId={backgroundImageId}
+                        value={background}
+                        onChange={setBackground}
+                        onBusyChange={setPreparingBackground}
+                        name={editedName}
+                    />
+                    <p className="field-hint">
+                        Name und Bilder gelten in allen Listen mit diesem Profil.
+                    </p>
+                </> : (
+                    <p className="field-hint">
+                        Name und Bilder kann nur die Person ändern,
+                        der dieses Profil gehört.
+                    </p>
+                )}
 
                 <p>
                     Gespeicherter Stand: {name}, Position {position}.

@@ -67,20 +67,6 @@ async function readRecords(
     const lists = await rankingRepository.getAll()
     const items = await catalogRepository.getAll()
 
-    const itemIds = new Set(
-        items.map((item) => item.value.id),
-    )
-
-    const hasMissingProfile = lists.some((list) =>
-        list.value.entries.some(
-            (entry) => !itemIds.has(entry.itemId),
-        ),
-    )
-
-    if (hasMissingProfile) {
-        throw new Error('A referenced profile is missing.')
-    }
-
     return { lists, items }
 }
 

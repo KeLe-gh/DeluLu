@@ -8,17 +8,13 @@ import {
 
 export async function getSharedAddCatalog(listId: string) {
     const rows = await readAllRows((afterId, pageSize) => {
-        let query = supabase
-            .rpc('list_ranking_add_catalog', {
-                p_list_id: listId,
-            })
+        let query = supabase.rpc('list_ranking_add_catalog', {
+            p_list_id: listId,
+        })
             .order('id')
             .limit(pageSize)
 
-        if (afterId) {
-            query = query.gt('id', afterId)
-        }
-
+        if (afterId) query = query.gt('id', afterId)
         return query
     })
 
@@ -28,9 +24,8 @@ export async function getSharedAddCatalog(listId: string) {
     }))
 }
 
-export type SharedCatalogChoice = Awaited<
-    ReturnType<typeof getSharedAddCatalog>
->[number]
+export type SharedCatalogChoice =
+    Awaited<ReturnType<typeof getSharedAddCatalog>>[number]
 
 export async function addSharedRankingEntry(input: {
     listId: string
@@ -48,32 +43,15 @@ export async function addSharedRankingEntry(input: {
         async (preparePhoto) => {
             let profile: string | undefined
             let background: string | undefined
-
             const source = input.source
 
-            if (source && source.ownerId !== input.ownerId) {
-                if (source.value.profileImageId) {
-                    profile = await preparePhoto({
-                        ownerId: source.ownerId,
-                        imageId: source.value.profileImageId,
-                    })
-                }
-
-                if (source.value.backgroundImageId) {
-                    background = await preparePhoto({
-                        ownerId: source.ownerId,
-                        imageId: source.value.backgroundImageId,
-                    })
-                }
-            } else if (!source) {
+            if (!source) {
                 if (input.photo) {
                     profile = await preparePhoto(input.photo)
                 }
 
                 if (input.background) {
-                    background = await preparePhoto(
-                        input.background,
-                    )
+                    background = await preparePhoto(input.background)
                 }
             }
 

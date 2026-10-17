@@ -291,6 +291,7 @@ export default function SharedTierDetail({
                             <TierEntryEditor
                                 key={editing.id}
                                 item={item}
+                                canEditProfile={data.editableItemIds.includes(item.id)}
                                 onSave={(name, photo, background) =>
                                     perform(() => service.edit(
                                         id,
@@ -302,13 +303,11 @@ export default function SharedTierDetail({
                                         background,
                                     ))
                                 }
-                                onRemove={() => perform(
-                                    () => service.remove(
-                                        id,
-                                        data.revision,
-                                        editing.id,
-                                    ),
-                                )}
+                                onRemove={() =>
+                                    perform(() =>
+                                        service.remove(id, data.revision, editing.id),
+                                    )
+                                }
                                 onClose={() => setEditingId(null)}
                             />
                         )}

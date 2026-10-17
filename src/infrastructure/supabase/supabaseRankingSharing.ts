@@ -1,11 +1,9 @@
+import { mapSharedCatalogItem } from './mapSharedCatalogItem'
 import type { ProfileImageStore } from '../../features/images/model/profileImageStore'
-import { RevisionConflictError } from '../../shared/errors/persistence.errors'
 import { supabase } from './client'
-import {
-    mapCatalogItem,
-    mapRankingList,
-} from './database.mappers'
+import { mapRankingList } from './database.mappers'
 import { readAllRows } from './readAllRows'
+import { RevisionConflictError } from '../../shared/errors/persistence.errors'
 
 export class SharedRankingUnavailableError extends Error {
     constructor() {
@@ -30,7 +28,6 @@ export const supabaseRankingSharing = {
         const url = new URL(window.location.href)
         url.search = ''
         url.hash = '/share/' + data
-
         return url.href
     },
 
@@ -48,22 +45,17 @@ export const supabaseRankingSharing = {
 
     async list() {
         const rows = await readAllRows((afterId, pageSize) => {
-            let query = supabase
-                .rpc('list_shared_rankings')
+            let query = supabase.rpc('list_shared_rankings')
                 .order('id')
                 .limit(pageSize)
 
-            if (afterId) {
-                query = query.gt('id', afterId)
-            }
-
+            if (afterId) query = query.gt('id', afterId)
             return query
         })
 
-        return rows.sort(
-            (a, b) =>
-                b.created_at.localeCompare(a.created_at) ||
-                a.id.localeCompare(b.id),
+        return rows.sort((a, b) =>
+            b.created_at.localeCompare(a.created_at) ||
+            a.id.localeCompare(b.id),
         )
     },
 
@@ -88,46 +80,37 @@ export const supabaseRankingSharing = {
             throw new Error('List unavailable.')
         }
 
+        const userId = session.data.session.user.id
+
         return {
             ownerId: data.ranking_list.owner_id,
-            isOwner:
-                data.ranking_list.owner_id ===
-                session.data.session.user.id,
+            isOwner: data.ranking_list.owner_id === userId,
             revision: data.ranking_list.revision,
+            editableItemIds: data.catalog_items
+                .filter((row) => row.owner_id === userId)
+                .map((row) => row.id),
             catalogRevisions: Object.fromEntries(
-                data.catalog_items.map(
-                    (row) => [row.id, row.revision],
-                ),
+                data.catalog_items.map((row) => [row.id, row.revision]),
             ),
-            list: mapRankingList(
-                data.ranking_list,
-                data.entries,
-            ).value,
-            items: data.catalog_items.map(
-                (row) => mapCatalogItem(row).value,
-            ),
+            list: mapRankingList(data.ranking_list, data.entries).value,
+            items: data.catalog_items.map(mapSharedCatalogItem),
         }
     },
 
     async saveEntries(
         listId: string,
         expectedRevision: number,
-        entries: readonly {
-            id: string
-            position: number
-        }[],
+        entries: readonly { id: string; position: number }[],
     ): Promise<void> {
         const { data, error } = await supabase.rpc(
             'update_shared_ranking_entries',
             {
                 p_list_id: listId,
                 p_expected_revision: expectedRevision,
-                p_entries: entries.map(
-                    ({ id, position }) => ({
-                        id,
-                        position,
-                    }),
-                ),
+                p_entries: entries.map(({ id, position }) => ({
+                    id,
+                    position,
+                })),
             },
         )
 
@@ -140,10 +123,7 @@ export const supabaseRankingSharing = {
         }
 
         if (error) throw error
-
-        if (data === null) {
-            throw new Error('Missing saved revision.')
-        }
+        if (data === null) throw new Error('Missing saved revision.')
     },
 
     async leave(listId: string): Promise<void> {
@@ -165,24 +145,28 @@ export const supabaseRankingSharing = {
     },
 }
 
-export function sharedRankingImages(
-    ownerId: string,
-): ProfileImageStore {
+export function sharedRankingImages(ownerId: string): ProfileImageStore {
     return {
         async download(id) {
+            const uuid =
+                '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'
+
+            const path = id.includes('/') ? id : `${ownerId}/${id}`
+
+            if (!new RegExp(`^${uuid}/${uuid}$`, 'i').test(path)) {
+                throw new Error('Invalid photo ID.')
+            }
+
             const { data, error } = await supabase.storage
                 .from('profile-photos')
-                .download(`${ownerId}/${id}.jpg`)
+                .download(`${path}.jpg`)
 
             if (error) throw error
-
             return data
         },
 
         async upload() {
-            throw new Error(
-                'Shared photos are read-only for now.',
-            )
+            throw new Error('Shared photos are read-only for now.')
         },
 
         async cleanupUnused() {},

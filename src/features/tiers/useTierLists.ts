@@ -23,13 +23,6 @@ async function readRecords(
 ): Promise<Records> {
     const lists = await repository.getAll()
     const items = await catalog.getAll()
-    const known = new Set(items.map((item) => item.value.id))
-
-    if (lists.some((list) =>
-        list.value.entries.some((entry) => !known.has(entry.itemId)),
-    )) {
-        throw new Error('Ein referenziertes Profil fehlt.')
-    }
 
     return { lists, items }
 }
