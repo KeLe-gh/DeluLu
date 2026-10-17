@@ -340,7 +340,110 @@ export function useTierLists(
         }
     }
 
+    async function manageList(
+        id: string,
+        title?: string,
+    ): Promise<boolean> {
+        if (busy.current || blocked.current) return false
+
+        const stored = recordsRef.current.lists.find(
+            (list) => list.value.id === id,
+        )
+
+        if (!stored) return title === undefined
+
+        if (
+            title !== undefined &&
+            stored.value.title === title.trim()
+        ) {
+            return true
+        }
+
+        busy.current = true
+        setIsSaving(true)
+        setError('')
+
+        const current = generation.current
+
+        try {
+            if (title === undefined) {
+                await repository.remove(id, stored.revision)
+
+                if (current !== generation.current) return false
+
+                accept({
+                    ...recordsRef.current,
+                    lists: recordsRef.current.lists.filter(
+                        (list) => list.value.id !== id,
+                    ),
+                })
+            } else {
+                const saved = await repository.rename(
+                    id,
+                    title.trim(),
+                    stored.revision,
+                )
+
+                if (current !== generation.current) return false
+
+                accept({
+                    ...recordsRef.current,
+                    lists: upsert(recordsRef.current.lists, saved),
+                })
+            }
+
+            return true
+        } catch (cause) {
+            if (current !== generation.current) return false
+
+            try {
+                const recovered = await readRecords(
+                    repository,
+                    catalog,
+                )
+
+                if (current !== generation.current) return false
+
+                accept(recovered)
+
+                const saved = recovered.lists.find(
+                    (list) => list.value.id === id,
+                )
+
+                if (
+                    title === undefined
+                        ? !saved
+                        : saved?.value.title === title.trim()
+                ) {
+                    return true
+                }
+            } catch {
+                // Keep the current view until reload succeeds.
+            }
+
+            if (current !== generation.current) return false
+
+            blocked.current = true
+            setNeedsReload(true)
+            setError(
+                cause instanceof RevisionConflictError
+                    ? 'Die Tierliste wurde inzwischen geändert. Bitte lade den aktuellen Stand.'
+                    : 'Die Änderung konnte nicht bestätigt werden. Bitte lade den aktuellen Stand.',
+            )
+
+            return false
+        } finally {
+            if (current === generation.current) {
+                busy.current = false
+                setIsSaving(false)
+            }
+        }
+    }
+
     return {
+        renameList: (id: string, title: string) =>
+            manageList(id, title),
+        deleteList: (id: string) => manageList(id),
         lists: records.lists.map((record) => record.value),
         items: records.items.map((record) => record.value),
         isLoading,

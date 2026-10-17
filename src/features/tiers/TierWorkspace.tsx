@@ -4,6 +4,7 @@ import type { ProfileImageStore } from '../images/model/profileImageStore'
 import { ModalFeedbackContext } from '../../shared/components/ModalFeedbackContext'
 import { AppHeader } from '../../app/AppHeader'
 import { AddTierEntryDialog } from './AddTierEntryDialog'
+import { TierListMenu } from './TierListMenu'
 import { CreateTierListDialog } from './CreateTierListDialog'
 import { TierListView as TierBoard } from './TierListView'
 import type { TierRepository } from './tier.repository'
@@ -118,38 +119,15 @@ export default function TierWorkspace({
                                         <p>Erstelle deine erste über +.</p>
                                     </div>
                                 ) : (
-                                    <nav
-                                        className="feature-grid"
-                                        aria-label="Tierlisten"
-                                    >
-                                        {state.lists.map((item) => (
-                                            <button
-                                                key={item.id}
-                                                type="button"
-                                                className="feature-card"
-                                                onClick={() => onNavigate(
-                                                    '/tiers/' +
-                                                    encodeURIComponent(item.id),
-                                                )}
-                                            >
-                                                <span
-                                                    className="feature-card__icon"
-                                                    aria-hidden="true"
-                                                >
-                                                    ▤
-                                                </span>
-
-                                                <span>{item.title}</span>
-
-                                                <span
-                                                    className="feature-card__arrow"
-                                                    aria-hidden="true"
-                                                >
-                                                    ›
-                                                </span>
-                                            </button>
-                                        ))}
-                                    </nav>
+                                    <TierListMenu
+                                        lists={state.lists}
+                                        disabled={busy || state.needsReload}
+                                        onOpen={(id) => onNavigate(
+                                            '/tiers/' + encodeURIComponent(id),
+                                        )}
+                                        onRename={state.renameList}
+                                        onDelete={state.deleteList}
+                                    />
                                 )}
                             </>
                         ) : list ? (

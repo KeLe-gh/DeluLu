@@ -32,6 +32,28 @@ export type TierEntryRow = {
 export type AppDatabase = Omit<Database, 'public'> & {
     public: Omit<Database['public'], 'Tables' | 'Functions'> & {
         Functions: Database['public']['Functions'] & {
+            rename_tier_list: {
+                Args: {
+                    p_id: string
+                    p_title: string
+                    p_expected_revision: number
+                }
+                Returns: TierListRow[]
+                SetofOptions: {
+                    from: '*'
+                    to: 'tier_lists'
+                    isOneToOne: false
+                    isSetofReturn: true
+                }
+            }
+
+            delete_tier_list: {
+                Args: {
+                    p_id: string
+                    p_expected_revision: number
+                }
+                Returns: boolean
+            }
             delete_catalog_item: {
                 Args: {
                     p_id: string

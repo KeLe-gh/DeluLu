@@ -95,7 +95,27 @@ export function sameTierOrder(a: TierList, b: TierList): boolean {
 
 export interface TierRepository {
     getAll(): Promise<Versioned<TierList>[]>
-    create(input: CreateTierListInput): Promise<Versioned<TierList>>
-    addEntry(input: AddTierEntryInput): Promise<TierEntrySaveResult>
-    moveEntry(input: MoveTierEntryInput): Promise<Versioned<TierList>>
+
+    create(
+        input: CreateTierListInput,
+    ): Promise<Versioned<TierList>>
+
+    addEntry(
+        input: AddTierEntryInput,
+    ): Promise<TierEntrySaveResult>
+
+    moveEntry(
+        input: MoveTierEntryInput,
+    ): Promise<Versioned<TierList>>
+
+    rename(
+        id: string,
+        title: string,
+        expectedRevision: number,
+    ): Promise<Versioned<TierList>>
+
+    remove(
+        id: string,
+        expectedRevision: number,
+    ): Promise<void>
 }

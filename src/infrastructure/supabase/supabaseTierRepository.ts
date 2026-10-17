@@ -139,6 +139,52 @@ export const supabaseTierRepository: TierRepository = {
             )
     },
 
+    async rename(id, title, expectedRevision) {
+        const { data, error } = await supabase
+            .rpc('rename_tier_list', {
+                p_id: id,
+                p_title: title,
+                p_expected_revision: expectedRevision,
+            })
+            .single()
+
+        if (error?.code === 'PT409') {
+            throw new RevisionConflictError()
+        }
+
+        if (error) throw error
+
+        if (!data) {
+            throw new Error(
+                'Die Tierliste konnte nicht umbenannt werden.',
+            )
+        }
+
+        return readList(data)
+    },
+
+    async remove(id, expectedRevision) {
+        const { data, error } = await supabase.rpc(
+            'delete_tier_list',
+            {
+                p_id: id,
+                p_expected_revision: expectedRevision,
+            },
+        )
+
+        if (error?.code === 'PT409') {
+            throw new RevisionConflictError()
+        }
+
+        if (error) throw error
+
+        if (data !== true) {
+            throw new Error(
+                'Die Tierliste konnte nicht gelöscht werden.',
+            )
+        }
+    },
+
     async create(input) {
         const { data, error } = await supabase
             .rpc('create_tier_list', {
