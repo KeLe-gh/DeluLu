@@ -29,7 +29,9 @@ const poolId = 'tier-pool'
 const sensors = [
     PointerSensor.configure({
         activationConstraints: [
-            new PointerActivationConstraints.Distance({ value: 5 }),
+            new PointerActivationConstraints.Distance({
+                value: 5,
+            }),
         ],
     }),
     KeyboardSensor.configure({
@@ -146,11 +148,13 @@ export function TierBoard({
                               disabled,
                               onMove,
                               onDragChange,
+                              onRenameTier,
                           }: {
+    onDragChange?: (dragging: boolean) => void
+    onRenameTier?: (tierId: string) => void
     list: TierList
     items: readonly CatalogItem[]
     disabled: boolean
-    onDragChange?: (dragging: boolean) => void
     onMove: (
         entryId: string,
         tierId: string | null,
@@ -169,6 +173,7 @@ export function TierBoard({
         if (!source || !target || target.id === source.id) return null
 
         const entryId = String(source.id)
+
         const targetEntry = list.entries.find(
             (entry) => entry.id === target.id,
         )
@@ -283,8 +288,10 @@ export function TierBoard({
                             String(
                                 operation.source?.data.name ?? 'Profil',
                             ) + ' aufgenommen.',
+
                         dragover: ({ operation }: DragOverEvent) => {
                             const next = locate({ operation })
+
                             if (!next) return
 
                             const label = list.tiers.find(
@@ -293,6 +300,7 @@ export function TierBoard({
 
                             return label + ', Position ' + (next.index + 1)
                         },
+
                         dragend: ({ canceled }: DragEndEvent) =>
                             canceled
                                 ? 'Verschieben abgebrochen.'
@@ -310,8 +318,8 @@ export function TierBoard({
             onDragOver={preview}
             onDragEnd={async (event) => {
                 onDragChange?.(false)
-
                 const next = !event.canceled ? locate(event) : null
+
                 setPlacement(null)
 
                 if (!next || disabled || finishing.current) return
@@ -332,12 +340,38 @@ export function TierBoard({
             <div className="tier-board" aria-label="Tierliste">
                 {list.tiers.map((tier) => (
                     <div className="tier-board__row" key={tier.id}>
-                        <span
-                            className="tier-board__label"
-                            style={{ background: tier.color }}
-                        >
-                            {tier.label}
-                        </span>
+                        {onRenameTier ? (
+                            <button
+                                type="button"
+                                className="tier-board__label tier-board__label--editable"
+                                style={{ background: tier.color }}
+                                aria-label={'Tier „' + tier.label + '“ umbenennen'}
+                                title="Tier umbenennen"
+                                disabled={disabled}
+                                onClick={() => onRenameTier(tier.id)}
+                            >
+                                <span className={
+                                          tier.label.length > 2
+                                              ? 'tier-board__label-text--long'
+                                              : undefined
+                                      }>
+                                    {tier.label}
+                                </span>
+                            </button>
+                        ) : (
+                            <span
+                                className="tier-board__label"
+                                style={{ background: tier.color }}
+                            >
+                                <span className={
+                                          tier.label.length > 2
+                                              ? 'tier-board__label-text--long'
+                                              : undefined
+                                      }>
+                                    {tier.label}
+                                </span>
+                            </span>
+                        )}
 
                         <DropArea
                             id={tier.id}

@@ -28,6 +28,20 @@ function checked<T>(result: {
 }
 
 export const supabaseTierSharing = {
+    async renameRow(
+        id: string,
+        revision: number,
+        tierId: string,
+        label: string,
+    ) {
+        checked(await supabase.rpc('rename_shared_tier_row', {
+            p_list_id: id,
+            p_expected_revision: revision,
+            p_tier_id: tierId,
+            p_label: label,
+        }))
+    },
+
     async createLink(id: string) {
         const token = checked(
             await supabase.rpc('create_tier_share_link', {
@@ -71,7 +85,9 @@ export const supabaseTierSharing = {
 
     async read(id: string) {
         const [response, auth] = await Promise.all([
-            supabase.rpc('get_shared_tier', { p_list_id: id }),
+            supabase.rpc('get_shared_tier', {
+                p_list_id: id,
+            }),
             supabase.auth.getSession(),
         ])
 
@@ -89,20 +105,24 @@ export const supabaseTierSharing = {
             ownerId: data.tier_list.owner_id,
             isOwner: data.tier_list.owner_id === userId,
             revision: data.tier_list.revision,
+
             editableItemIds: data.catalog_items
                 .filter((item) => item.owner_id === userId)
                 .map((item) => item.id),
+
             catalogRevisions: Object.fromEntries(
                 data.catalog_items.map((item) => [
                     item.id,
                     item.revision,
                 ]),
             ),
+
             list: mapTierList(
                 data.tier_list,
                 data.rows,
                 data.entries,
             ).value,
+
             items: data.catalog_items.map(mapSharedCatalogItem),
         }
     },
@@ -229,7 +249,11 @@ export const supabaseTierSharing = {
         }))
     },
 
-    async remove(id: string, revision: number, entryId: string) {
+    async remove(
+        id: string,
+        revision: number,
+        entryId: string,
+    ) {
         checked(await supabase.rpc('remove_shared_tier_entry', {
             p_list_id: id,
             p_expected_revision: revision,

@@ -199,3 +199,53 @@
 .tier-insert-after::after {
     right: -3px;
 }
+.tier-board__label--editable {
+    width: 100%;
+    min-width: 0;
+    padding: 6px 2px;
+    border: 0;
+    border-right: 4px solid #080808;
+    border-radius: 0;
+    font: inherit;
+    font-weight: 700;
+    line-height: 1.15;
+    text-align: center;
+    cursor: pointer;
+    touch-action: manipulation;
+}
+
+.tier-board__label > span {
+    min-width: 0;
+    max-width: 100%;
+    overflow-wrap: anywhere;
+    white-space: normal;
+}
+
+.tier-board__label-text--long {
+    font-size: 0.75rem;
+}
+
+.tier-board__label--editable:disabled {
+    cursor: default;
+}
+
+.tier-board__label--editable:focus-visible {
+    outline: 3px solid var(--accent);
+    outline-offset: -3px;
+}
+.tier-board {
+    display: grid;
+    grid-template-columns: fit-content(96px) minmax(0, 1fr);
+}
+
+.tier-board__row {
+    grid-column: 1 / -1;
+    grid-template-columns: subgrid;
+}
+
+.tier-board__label {
+    box-sizing: border-box;
+    min-width: 48px;
+    max-width: 96px;
+    padding: 6px;
+}

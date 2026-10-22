@@ -1,16 +1,17 @@
+import { supabaseProfileImageStore } from '../../infrastructure/supabase/supabaseProfileImageStore'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { AppHeader } from '../../app/AppHeader'
-import { supabaseProfileImageStore } from '../../infrastructure/supabase/supabaseProfileImageStore'
 import { supabaseTierSharing as service } from '../../infrastructure/supabase/supabaseTierSharing'
 import { sharedRankingImages } from '../../infrastructure/supabase/supabaseRankingSharing'
+import { useLiveList } from './hooks/useLiveList'
 import { Modal } from '../../shared/components/Modal'
 import { ModalFeedbackContext } from '../../shared/components/ModalFeedbackContext'
 import { ProfileImageContext } from '../images/ProfileImageContext'
 import { RankingShareButton } from '../rankings/components/RankingShareButton'
 import { TierEntryEditor } from '../tiers/TierEntryEditor'
+import { TierLabelEditor } from '../tiers/TierLabelEditor'
 import { TierListView } from '../tiers/TierListView'
 import { SharedTierAddDialog } from './SharedTierAddDialog'
-import { useLiveList } from './hooks/useLiveList'
 import '../tiers/Tiers.css'
 import './Sharing.css'
 
@@ -24,18 +25,17 @@ export default function SharedTierDetail({
     onBack: () => void
 }) {
     const [editingId, setEditingId] = useState<string | null>(null)
+    const [renamingId, setRenamingId] = useState<string | null>(null)
     const [adding, setAdding] = useState(false)
     const [leaving, setLeaving] = useState(false)
-    const [leaveError, setLeaveError] = useState('')
-    const [leaveBusy, setLeaveBusy] = useState(false)
-    const working = useRef(false)
 
     const live = useLiveList(
         id,
         service.read,
-        Boolean(editingId) || adding || leaving,
+        Boolean(editingId) || Boolean(renamingId) || adding || leaving,
         () => {
             setEditingId(null)
+            setRenamingId(null)
             setAdding(false)
             setLeaving(false)
         },
@@ -51,6 +51,10 @@ export default function SharedTierDetail({
         epoch,
     } = live
 
+    const working = useRef(false)
+    const [leaveError, setLeaveError] = useState('')
+    const [leaveBusy, setLeaveBusy] = useState(false)
+
     const pointer = useRef<{
         x: number
         y: number
@@ -60,10 +64,17 @@ export default function SharedTierDetail({
     const editing = data?.list.entries.find(
         (entry) => entry.id === editingId,
     )
+
+    const renaming = data?.list.tiers.find(
+        (tier) => tier.id === renamingId,
+    )
+
     const item = data?.items.find(
         (item) => item.id === editing?.itemId,
     )
+
     const ownerId = data?.ownerId ?? ''
+
     const images = useMemo(
         () => sharedRankingImages(ownerId),
         [ownerId],
@@ -80,6 +91,7 @@ export default function SharedTierDetail({
 
         setAdding(false)
         setEditingId(null)
+        setRenamingId(null)
         setLeaving(false)
         setLeaveError('')
         live.reload()
@@ -92,6 +104,7 @@ export default function SharedTierDetail({
 
         if (saved) {
             setEditingId(null)
+            setRenamingId(null)
             setAdding(false)
         }
 
@@ -120,7 +133,9 @@ export default function SharedTierDetail({
 
     const feedback = <>
         {live.offline && (
-            <p className="field-hint">Live-Verbindung unterbrochen.</p>
+            <p className="field-hint">
+                Live-Verbindung unterbrochen.
+            </p>
         )}
         {live.changed && (
             <p role="status">
@@ -130,7 +145,6 @@ export default function SharedTierDetail({
         {leaveError && <p role="alert">{leaveError}</p>}
         {busy && <p role="status">Speichern …</p>}
         {error && <p role="alert">{error}</p>}
-
         {needsReload && (
             <button
                 type="button"
@@ -143,21 +157,25 @@ export default function SharedTierDetail({
         )}
     </>
 
+    const boardBlocked =
+        blocked ||
+        adding ||
+        Boolean(editing) ||
+        Boolean(renaming) ||
+        leaving
+
     return (
-        <ModalFeedbackContext.Provider
-            value={{
-                busy: busy || leaveBusy,
-                blocked: blocked || leaveBusy,
-                content: feedback,
-            }}
-        >
+        <ModalFeedbackContext.Provider value={{
+            busy: busy || leaveBusy,
+            blocked: blocked || leaveBusy,
+            content: feedback,
+        }}>
             <AppHeader
                 onHome={() => navigate('/')}
                 onBack={onBack}
-                onAdd={
-                    data && !blocked
-                        ? () => setAdding(true)
-                        : undefined
+                onAdd={data && !blocked
+                    ? () => setAdding(true)
+                    : undefined
                 }
                 addLabel="Eintrag hinzufügen"
             />
@@ -193,29 +211,22 @@ export default function SharedTierDetail({
                     )}
                 </div>
 
-                {loading && (
-                    <p role="status">Liste wird geladen …</p>
-                )}
+                {loading && <p role="status">Liste wird geladen …</p>}
 
                 {!loading && !data && (
                     <p role="alert">
                         Diese Liste ist gerade nicht verfügbar.
-                        Prüfe deine Verbindung.
-                        Vielleicht wurde sie gelöscht oder der Zugriff beendet.
+                        Prüfe deine Verbindung. Vielleicht wurde sie
+                        gelöscht oder der Zugriff beendet.
                     </p>
                 )}
 
-                {!adding && !editing && !leaving && feedback}
+                {!adding && !editing && !renaming && !leaving && feedback}
 
                 {data && (
                     <ProfileImageContext.Provider value={images}>
                         <div
-                            inert={
-                                blocked ||
-                                adding ||
-                                Boolean(editing) ||
-                                leaving
-                            }
+                            inert={boardBlocked}
                             onPointerDownCapture={(event) => {
                                 pointer.current = {
                                     x: event.clientX,
@@ -226,13 +237,10 @@ export default function SharedTierDetail({
                             onPointerMoveCapture={(event) => {
                                 const start = pointer.current
 
-                                if (
-                                    start &&
-                                    Math.hypot(
-                                        event.clientX - start.x,
-                                        event.clientY - start.y,
-                                    ) >= 5
-                                ) {
+                                if (start && Math.hypot(
+                                    event.clientX - start.x,
+                                    event.clientY - start.y,
+                                ) >= 5) {
                                     start.moved = true
                                 }
                             }}
@@ -248,10 +256,9 @@ export default function SharedTierDetail({
                                     !(event.target instanceof Element)
                                 ) return
 
-                                const tile =
-                                    event.target.closest<HTMLElement>(
-                                        '[data-tier-entry],[data-cake-entry]',
-                                    )
+                                const tile = event.target.closest<HTMLElement>(
+                                    '[data-tier-entry],[data-cake-entry]',
+                                )
 
                                 const entryId =
                                     tile?.dataset.tierEntry ??
@@ -264,25 +271,23 @@ export default function SharedTierDetail({
                                 key={epoch}
                                 list={data.list}
                                 items={data.items}
-                                disabled={
-                                    blocked ||
-                                    adding ||
-                                    Boolean(editing) ||
-                                    leaving
-                                }
+                                disabled={boardBlocked}
                                 onDragChange={live.onDragChange}
+                                onRenameTier={setRenamingId}
                                 onMove={async (entryId, tierId, index) => {
                                     if (pointer.current) {
                                         pointer.current.moved = true
                                     }
 
-                                    await perform(() => service.move(
-                                        id,
-                                        data.revision,
-                                        entryId,
-                                        tierId,
-                                        index,
-                                    ))
+                                    await perform(() =>
+                                        service.move(
+                                            id,
+                                            data.revision,
+                                            entryId,
+                                            tierId,
+                                            index,
+                                        ),
+                                    )
                                 }}
                             />
                         </div>
@@ -291,7 +296,9 @@ export default function SharedTierDetail({
                             <TierEntryEditor
                                 key={editing.id}
                                 item={item}
-                                canEditProfile={data.editableItemIds.includes(item.id)}
+                                canEditProfile={
+                                    data.editableItemIds.includes(item.id)
+                                }
                                 onSave={(name, photo, background) =>
                                     perform(() => service.edit(
                                         id,
@@ -305,7 +312,11 @@ export default function SharedTierDetail({
                                 }
                                 onRemove={() =>
                                     perform(() =>
-                                        service.remove(id, data.revision, editing.id),
+                                        service.remove(
+                                            id,
+                                            data.revision,
+                                            editing.id,
+                                        ),
                                     )
                                 }
                                 onClose={() => setEditingId(null)}
@@ -314,19 +325,39 @@ export default function SharedTierDetail({
                     </ProfileImageContext.Provider>
                 )}
 
+                {data && renaming && (
+                    <TierLabelEditor
+                        key={renaming.id}
+                        label={renaming.label}
+                        onSave={(label) =>
+                            perform(() =>
+                                service.renameRow(
+                                    id,
+                                    data.revision,
+                                    renaming.id,
+                                    label,
+                                ),
+                            )
+                        }
+                        onClose={() => setRenamingId(null)}
+                    />
+                )}
+
                 {data && adding && (
                     <SharedTierAddDialog
                         list={data.list}
                         onClose={() => setAdding(false)}
-                        onAdd={(draft, source) => perform(
-                            () => service.add(
-                                id,
-                                data.ownerId,
-                                data.revision,
-                                draft,
-                                source,
-                            ),
-                        )}
+                        onAdd={(draft, source) =>
+                            perform(() =>
+                                service.add(
+                                    id,
+                                    data.ownerId,
+                                    data.revision,
+                                    draft,
+                                    source,
+                                ),
+                            )
+                        }
                     />
                 )}
 
@@ -342,7 +373,6 @@ export default function SharedTierDetail({
                                 Mit einem gültigen Einladungslink kannst du
                                 später wieder beitreten.
                             </p>
-
                             <button
                                 type="button"
                                 className="modal__danger"

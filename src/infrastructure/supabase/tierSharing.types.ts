@@ -1,23 +1,49 @@
 import type { Database } from './database.types'
-import type { TierEntryRow, TierListRow, TierRow } from './appDatabase.types'
+import type {
+    TierEntryRow,
+    TierListRow,
+    TierRow,
+} from './appDatabase.types'
 
-type ListArgs = { p_list_id: string }
-type RevisionArgs = ListArgs & { p_expected_revision: number }
-type CatalogRow = Database['public']['Tables']['catalog_items']['Row']
+type ListArgs = {
+    p_list_id: string
+}
+
+type RevisionArgs = ListArgs & {
+    p_expected_revision: number
+}
+
+type CatalogRow =
+    Database['public']['Tables']['catalog_items']['Row']
 
 export type TierSharingFunctions = {
+    rename_shared_tier_row: {
+        Args: RevisionArgs & {
+            p_tier_id: string
+            p_label: string
+        }
+        Returns: number
+    }
+
     create_tier_share_link: {
-        Args: ListArgs & { p_rotate?: boolean }
+        Args: ListArgs & {
+            p_rotate?: boolean
+        }
         Returns: string
     }
+
     join_tier_share: {
-        Args: { p_token: string }
+        Args: {
+            p_token: string
+        }
         Returns: string
     }
+
     list_shared_tiers: {
         Args: Record<string, never>
         Returns: TierListRow[]
     }
+
     get_shared_tier: {
         Args: ListArgs
         Returns: {
@@ -27,16 +53,30 @@ export type TierSharingFunctions = {
             catalog_items: CatalogRow[]
         }
     }
-    leave_shared_tier: { Args: ListArgs; Returns: boolean }
-    stop_tier_sharing: { Args: ListArgs; Returns: boolean }
+
+    leave_shared_tier: {
+        Args: ListArgs
+        Returns: boolean
+    }
+
+    stop_tier_sharing: {
+        Args: ListArgs
+        Returns: boolean
+    }
+
     reserve_tier_photo: {
         Args: RevisionArgs
-        Returns: { owner_id: string; image_id: string }
+        Returns: {
+            owner_id: string
+            image_id: string
+        }
     }
+
     list_tier_add_catalog: {
         Args: ListArgs
         Returns: CatalogRow[]
     }
+
     add_shared_tier_entry: {
         Args: RevisionArgs & {
             p_entry_id: string
@@ -48,6 +88,7 @@ export type TierSharingFunctions = {
         }
         Returns: number
     }
+
     edit_shared_tier_entry: {
         Args: RevisionArgs & {
             p_entry_id: string
@@ -60,6 +101,7 @@ export type TierSharingFunctions = {
         }
         Returns: number
     }
+
     move_shared_tier_entry: {
         Args: RevisionArgs & {
             p_entry_id: string
@@ -68,8 +110,11 @@ export type TierSharingFunctions = {
         }
         Returns: number
     }
+
     remove_shared_tier_entry: {
-        Args: RevisionArgs & { p_entry_id: string }
+        Args: RevisionArgs & {
+            p_entry_id: string
+        }
         Returns: number
     }
 }
