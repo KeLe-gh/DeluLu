@@ -19,6 +19,7 @@ import type {
     RankingList,
 } from '../../../shared/types/list.types'
 import { SwipeToReveal } from '../../../shared/components/SwipeToReveal'
+import { ChatUnreadBadge } from '../../chat/DevListChat'
 import { getRankingSize } from '../model/ranking.operations'
 import './RankingEntries.css'
 import './RankingLists.css'
@@ -106,7 +107,11 @@ function SortableList({
                 >
                     <span className="ranking-entry__name">
                         <strong className="ranking-card__title">
-                            {list.title}
+                            {list.title}{' '}
+                            <ChatUnreadBadge
+                                kind="ranking"
+                                id={list.id}
+                            />
                         </strong>
 
                         <span className="ranking-list__subtitle">
@@ -171,6 +176,7 @@ export function SortableRankingLists({
                                 'Leertaste zum Ablegen. ' +
                                 'Escape zum Abbrechen.',
                         },
+
                         announcements: {
                             dragstart: () => 'Liste aufgenommen.',
 
@@ -198,9 +204,7 @@ export function SortableRankingLists({
                 onDragEnd={async (event) => {
                     suppressOpenUntil.current = Date.now() + 200
 
-                    if (event.canceled) {
-                        return
-                    }
+                    if (event.canceled) return
 
                     const { source } = event.operation
 

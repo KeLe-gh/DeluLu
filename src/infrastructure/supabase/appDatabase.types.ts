@@ -31,7 +31,10 @@ export type TierEntryRow = {
 
 export type AppDatabase = Omit<Database, 'public'> & {
     public: Omit<Database['public'], 'Tables' | 'Functions'> & {
-        Functions: Database['public']['Functions'] & import('./tierSharing.types').TierSharingFunctions & {
+        Functions:
+            Database['public']['Functions'] &
+            import('./tierSharing.types').TierSharingFunctions &
+            import('./chatDatabase.types').ChatFunctions & {
             edit_shared_ranking_entry: {
                 Args: {
                     p_list_id: string

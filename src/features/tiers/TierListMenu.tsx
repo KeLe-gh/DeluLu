@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { SwipeToReveal } from '../../shared/components/SwipeToReveal'
 import { NameDialog } from '../../shared/components/NameDialog'
 import type { TierList } from '../../shared/types/list.types'
+import { ChatUnreadBadge } from '../chat/DevListChat'
 import './TierListMenu.css'
 
 export function TierListMenu({
@@ -18,10 +19,7 @@ export function TierListMenu({
     onDelete: (id: string) => Promise<boolean>
 }) {
     const [managedId, setManagedId] = useState<string | null>(null)
-
-    const managed = lists.find(
-        (list) => list.id === managedId,
-    )
+    const managed = lists.find((list) => list.id === managedId)
 
     return (
         <>
@@ -52,11 +50,19 @@ export function TierListMenu({
                                         className="tier-list-menu__icon"
                                         aria-hidden="true"
                                     >
-                                        {list.styleId === 'cake' ? '🍰' : '▤'}
+                                        {list.styleId === 'cake'
+                                            ? '🍰'
+                                            : '▤'}
                                     </span>
 
                                     <span className="tier-list-menu__name">
-                                        <strong>{list.title}</strong>
+                                        <strong>
+                                            {list.title}{' '}
+                                            <ChatUnreadBadge
+                                                kind="tier"
+                                                id={list.id}
+                                            />
+                                        </strong>
 
                                         <span className="tier-list-menu__subtitle">
                                             {list.styleId === 'cake'

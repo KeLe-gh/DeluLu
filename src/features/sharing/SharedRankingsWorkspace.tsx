@@ -1,10 +1,11 @@
 import { useRef, useState } from 'react'
 import { AppHeader } from '../../app/AppHeader'
 import { supabaseRankingSharing } from '../../infrastructure/supabase/supabaseRankingSharing'
-import { supabaseTierSharing } from '../../infrastructure/supabase/supabaseTierSharing'
 import SharedRankingDetail from './SharedRankingDetail'
 import SharedTierDetail from './SharedTierDetail'
+import { supabaseTierSharing } from '../../infrastructure/supabase/supabaseTierSharing'
 import { useLiveList } from './hooks/useLiveList'
+import { ChatUnreadBadge } from '../chat/DevListChat'
 import './Sharing.css'
 
 type Navigate = (path: string, replace?: boolean) => void
@@ -21,6 +22,7 @@ async function readSharedLists() {
             type: 'Top-Liste',
             path: '/shared/' + list.id,
         })),
+
         ...tiers.map((list) => ({
             ...list,
             type: list.style_id === 'cake'
@@ -28,15 +30,21 @@ async function readSharedLists() {
                 : 'Tierliste',
             path: '/shared-tiers/' + list.id,
         })),
-    ].sort((a, b) =>
-        b.created_at.localeCompare(a.created_at) ||
-        a.id.localeCompare(b.id),
+    ].sort(
+        (a, b) =>
+            b.created_at.localeCompare(a.created_at) ||
+            a.id.localeCompare(b.id),
     )
 }
 
 function SharedLists({ navigate }: { navigate: Navigate }) {
-    const { data, error, loading, reload, offline } =
-        useLiveList('overview', readSharedLists)
+    const {
+        data,
+        error,
+        loading,
+        reload,
+        offline,
+    } = useLiveList('overview', readSharedLists)
 
     return (
         <main className="page">
@@ -53,7 +61,9 @@ function SharedLists({ navigate }: { navigate: Navigate }) {
                 </button>
             </div>
 
-            {loading && <p role="status">Listen werden geladen …</p>}
+            {loading && (
+                <p role="status">Listen werden geladen …</p>
+            )}
 
             {offline && (
                 <p className="field-hint">
@@ -71,7 +81,9 @@ function SharedLists({ navigate }: { navigate: Navigate }) {
             {data?.length === 0 && (
                 <div className="empty-state">
                     <p>Noch keine geteilten Listen.</p>
-                    <p>Öffne einen Einladungslink, um beizutreten.</p>
+                    <p>
+                        Öffne einen Einladungslink, um beizutreten.
+                    </p>
                 </div>
             )}
 
@@ -84,7 +96,17 @@ function SharedLists({ navigate }: { navigate: Navigate }) {
                         onClick={() => navigate(list.path)}
                     >
                         <span>
-                            {list.title}
+                            {list.title}{' '}
+
+                            <ChatUnreadBadge
+                                kind={
+                                    list.path.startsWith('/shared-tiers/')
+                                        ? 'tier'
+                                        : 'ranking'
+                                }
+                                id={list.id}
+                            />
+
                             <small
                                 className="field-hint"
                                 style={{ display: 'block' }}
@@ -92,6 +114,7 @@ function SharedLists({ navigate }: { navigate: Navigate }) {
                                 {list.type}
                             </small>
                         </span>
+
                         <span
                             className="feature-card__arrow"
                             aria-hidden="true"
@@ -126,11 +149,9 @@ function Invitation({
         setError('')
 
         try {
-            const service = tier
-                ? supabaseTierSharing
-                : supabaseRankingSharing
-
-            const id = await service.join(token)
+            const id = await (
+                tier ? supabaseTierSharing : supabaseRankingSharing
+            ).join(token)
 
             navigate(
                 (tier ? '/shared-tiers/' : '/shared/') + id,
@@ -149,12 +170,13 @@ function Invitation({
     return (
         <main className="page">
             <h1>Eine Liste für euch 💜</h1>
+
             <p>
-                Du wurdest zu {
-                tier
+                Du wurdest zu{' '}
+                {tier
                     ? 'einer Tierliste oder einem Cake'
-                    : 'einer Top-Liste'
-            } eingeladen.
+                    : 'einer Top-Liste'}{' '}
+                eingeladen.
             </p>
 
             <div className="sharing-actions">
@@ -183,12 +205,15 @@ export default function SharedRankingsWorkspace({
     onBack: (parent: string) => void
 }) {
     const tier = path.startsWith('/tier-share/')
+
     const token = path.match(
         /^\/(?:share|tier-share)\/([0-9a-f]{64})$/,
     )?.[1]
+
     const tierId = path.match(
         /^\/shared-tiers\/([0-9a-f-]{36})$/,
     )?.[1]
+
     const id = path.match(
         /^\/shared\/([0-9a-f-]{36})$/,
     )?.[1]

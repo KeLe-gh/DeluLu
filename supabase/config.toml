@@ -1,0 +1,4 @@
+project_id = "delulu"
+
+[functions.chat-push-worker]
+verify_jwt = false

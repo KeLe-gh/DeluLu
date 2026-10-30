@@ -4,6 +4,8 @@ import { useAuth } from '../hooks/useAuth'
 import type { AuthService } from '../model/auth.types'
 import { SignInPage } from '../pages/SignInPage'
 import { SignUpPage } from '../pages/SignUpPage'
+import { PushSettings } from '../../notifications/PushSettings'
+import { disableDevicePush } from '../../notifications/pushDevice'
 
 interface AuthGateProps {
     authService: AuthService
@@ -39,6 +41,7 @@ export function AuthGate({
         setError('')
 
         try {
+            await disableDevicePush()
             await authService.signOut()
         } catch {
             setError(
@@ -139,6 +142,13 @@ export function AuthGate({
                         <div style={{ marginBlock: '0.5rem' }}>
                             {accountActions}
                         </div>
+                    )}
+
+                    {!isJoinPage && (
+                        <PushSettings
+                            key={user.id}
+                            userId={user.id}
+                        />
                     )}
 
                     <button
